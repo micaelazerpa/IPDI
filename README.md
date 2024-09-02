@@ -1,1 +1,1 @@
-# Introducción al Procesamiento de Imágenes
+# Introducción al Procesamiento Digital de Imágenes
