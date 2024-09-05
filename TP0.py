@@ -6,8 +6,10 @@ from tkinter import ttk
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import imageio
+import imageio.v2 as imageio
 from PIL import Image, ImageTk
+
+import os
 
 class Application(tk.Frame):
     global url_image
@@ -31,7 +33,7 @@ class Application(tk.Frame):
         self.buttons_frame.pack(side="left", padx=10, pady=10)
 
         # Botón 1
-        self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20)
+        self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
         self.button1.pack(pady=5)
 
         # Botón 2
@@ -44,8 +46,9 @@ class Application(tk.Frame):
         self.select.set(saturacion)
         self.seleccionado=tk.Label(self,textvariable=saturacion)
         self.seleccionado.pack(pady=5)
+
         # Botón 3
-        self.button3 = tk.Button(self.buttons_frame, command=self.processImage,text="Botón RGB", height=2, width=20)
+        self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
         
         self.button3.pack(pady=5)
 
@@ -73,15 +76,18 @@ class Application(tk.Frame):
         self.out = tk.Button(self.bottom_frame, text="Salir", command=self.close, height=2, width=28)
         self.out.pack(side="right", padx=10)
 
+
     def upload_image(self):
-        url_image = filedialog.askopenfilename(
-            title="Selecciona una imagen",
-            filetypes=[("Archivos de imagen", "*.jpg;*.jpeg;*.png;*.bmp;*.gif")]
-        )
+        global url_image
+        url_image = filedialog.askopenfilename(filetypes=[("Archivos de imagen", "*.jpg;*.jpeg;*.png;*.bmp;*.gif")])
+        print(f"Upload de imagen seleccionada: {url_image}")
+        
         if url_image: 
             self.show_image(url_image)
 
     def show_image(self, url_image):
+        print(f"Show de imagen seleccionada: {url_image}")
+
         imgIO = imageio.imread(url_image)
         img=Image.fromarray(imgIO)
         new_img = img.resize((500, 500))  # Cambiado para que la imagen se ajuste al tamaño del cuadro
@@ -89,14 +95,44 @@ class Application(tk.Frame):
         img1 = Label(self.square1, image=imagen_tk)
         img1.image = imagen_tk
         img1.pack()
+        self.loaded_image = img 
 
     def close(self):
         response = messagebox.askquestion("Salir", "¿Desea salir de la interfaz?")
         if response == 'yes':
             self.master.destroy()
-    def processImage(self):
+
+    def save_image(self):
+        if self.loaded_image:
+            save_path = os.path.join(os.getcwd(), 'imagen_guardada.png')  # Guarda en la carpeta de ejecución
+            self.loaded_image.save(save_path)
+            messagebox.showinfo("Imagen guardada", f"Imagen guardada en {save_path}")
+            self.url_image = save_path  # Actualiza la ruta de la imagen guardada
+
+    def processImageRGB(self):
+        global url_image
+        #if not self.url_image:
+         #   messagebox.showwarning("Error", "No se ha cargado ninguna imagen.")
+           # return
+        print(f"Ruta de imagen seleccionada: {url_image}")
+        #im = imageio.v2.imread(self.url_image.split('\\').reverse)
         im = imageio.imread(url_image)
-        print(im.shape,im.dtype)
+
+        print(im.shape, im.dtype)
+
+        titles = ['Rojo','Verde','Azul']
+        chanels = ['Reds','Greens','Blues']
+
+        for i in range(3):
+            plt.subplot(1,3,i+1)
+            plt.imshow(im[:,:,i], cmap=chanels[i])
+            plt.title(titles[i])
+            plt.axis('off')
+        plt.show()
+
+    def processImageYIQ(self):
+        im = imageio.imread(url_image)
+        print(im.shape, im.dtype)
 
         # we are working in float numbers [0,1] in image processing:
 
