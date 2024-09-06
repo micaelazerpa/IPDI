@@ -152,17 +152,13 @@ class Application(tk.Frame):
         YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
         print(im.shape,im.dtype)
         YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
+        titles = ['Y','I','Q']
 
-        YIQ[:,:,1] = (YIQ[:,:,1] + 0.59) / 1.18
-        YIQ[:,:,2] = (YIQ[:,:,2] + 0.52) / 1.04        
-        plt.figure(0)
-        plt.imshow(im)        
-        plt.figure(1)
-        plt.imshow(YIQ[:,:,0])
-        plt.figure(2)
-        plt.imshow(YIQ[:,:,1])
-        plt.figure(3)
-        plt.imshow(YIQ[:,:,2])
+        for i in range(3):
+            plt.subplot(1,3,i+1)
+            plt.imshow(im[:,:,i])
+            plt.title(titles[i])
+            plt.axis('off')
         plt.show()
         
     def show_image_in_rect(self, rect_coords, image_array):
