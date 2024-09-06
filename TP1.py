@@ -14,6 +14,9 @@ import os
 class Application(tk.Frame):
     global url_image
     url_image =""
+
+    global imRGB
+
     def __init__(self, master=None):
         super().__init__(master)
         self.pack()
@@ -54,6 +57,10 @@ class Application(tk.Frame):
         # Botón 4
         self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón YIQ", height=2, width=20)
         self.button4.pack(pady=5)
+
+        # Botón 5
+        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBaYIQ(imRGB), text="Botón RGB a YIQ", height=2, width=20)
+        self.button5.pack(pady=5)
 
         # Cuadro 2 de 500x500 píxeles con borde de líneas de trazos
         self.square2 = tk.Canvas(self.squares_frame, width=500, height=500, bg="white")
@@ -123,6 +130,7 @@ class Application(tk.Frame):
             self.url_image = save_path  # Actualiza la ruta de la imagen guardada
 
     def processImageRGB(self):
+        global imRGB
         global url_image
         #if not self.url_image:
          #   messagebox.showwarning("Error", "No se ha cargado ninguna imagen.")
@@ -142,6 +150,7 @@ class Application(tk.Frame):
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
+        imRGB = im
 
     def processImageYIQ(self):
         im = imageio.imread(url_image)
@@ -152,11 +161,33 @@ class Application(tk.Frame):
         YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
         print(im.shape,im.dtype)
         YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
-        titles = ['Y','I','Q']
+        titles = ['Canal YIQ','Canal Y','Canal I','Canal Q']
 
-        for i in range(3):
-            plt.subplot(1,3,i+1)
-            plt.imshow(im[:,:,i])
+        for i in range(4):
+            plt.subplot(1,4,i+1)
+            if i==0:
+                plt.imshow(YIQ)
+            else:
+                plt.imshow(YIQ[:,:,i-1])
+            plt.title(titles[i])
+            plt.axis('off')
+        plt.show()
+
+    def processImageRGBaYIQ(self, im):
+        YIQ=np.zeros(im.shape)
+        YIQ[:,:,0] = np.clip((im[:,:,0]*0.299 +  im[:,:,1] *0.587 + im[:,:,2]*0.114),0.,1.)
+        print(im.shape,im.dtype)
+        YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
+        print(im.shape,im.dtype)
+        YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
+        titles = ['Canal YIQ','Canal Y','Canal I','Canal Q']
+
+        for i in range(4):
+            plt.subplot(1,4,i+1)
+            if i==0:
+                plt.imshow(YIQ)
+            else:
+                plt.imshow(YIQ[:,:,i-1])
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
