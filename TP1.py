@@ -145,31 +145,25 @@ class Application(tk.Frame):
 
     def processImageYIQ(self):
         im = imageio.imread(url_image)
-        print(im.shape, im.dtype)
-
-        # we are working in float numbers [0,1] in image processing:
-
         im = np.clip(im/255,0.,1.)
-        # print(im.shape,im.dtype)
         YIQ=np.zeros(im.shape)
-        Y=im[:,:,0]
-        I=im[:,:,1]
-        Q=im[:,:,2]
-        YIQ[:,:,0] = np.clip((Y*0.299 +  I *0.587 + Q*0.114),0.,1.)
+        YIQ[:,:,0] = np.clip((im[:,:,0]*0.299 +  im[:,:,1] *0.587 + im[:,:,2]*0.114),0.,1.)
         print(im.shape,im.dtype)
-        YIQ[:,:,1] = np.clip(Y*0.595 +  I *(-0.274) + Q*(-0.321),-0.59,0.59)
+        YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
         print(im.shape,im.dtype)
-        YIQ[:,:,2] = np.clip(Y*0.211 +  I *(-0.522) + Q*(0.311),-0.52,0.52)
-        # print(im.shape,im.dtype)
-          # Convertir los componentes Y, I y Q a imágenes
-        y_image = (YIQ[:, :, 0] * 255).astype(np.uint8)
-        i_image = (YIQ[:, :, 1] * 255).astype(np.uint8)
-        q_image = (YIQ[:, :, 2] * 255).astype(np.uint8)
+        YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
 
-        # Mostrar en los tres subcuadros correspondientes
-        self.show_image_in_rect(self.square2_rect1, y_image)  # Componente Y
-        self.show_image_in_rect(self.square2_rect2, i_image)  # Componente I
-        self.show_image_in_rect(self.square2_rect3, q_image)  # Componente Q
+        YIQ[:,:,1] = (YIQ[:,:,1] + 0.59) / 1.18
+        YIQ[:,:,2] = (YIQ[:,:,2] + 0.52) / 1.04        
+        plt.figure(0)
+        plt.imshow(im)        
+        plt.figure(1)
+        plt.imshow(YIQ[:,:,0])
+        plt.figure(2)
+        plt.imshow(YIQ[:,:,1])
+        plt.figure(3)
+        plt.imshow(YIQ[:,:,2])
+        plt.show()
         
     def show_image_in_rect(self, rect_coords, image_array):
         img = Image.fromarray(image_array)
