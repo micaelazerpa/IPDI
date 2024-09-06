@@ -72,7 +72,10 @@ class Application(tk.Frame):
         self.square2.create_rectangle(250, 5, 495, 250, outline="blue", width=2)  # Cuadro superior derecho
         self.square2.create_rectangle(5, 250, 250, 495, outline="blue", width=2)  # Cuadro inferior izquierdo
         self.square2.create_rectangle(250, 250, 495, 495, outline="blue", width=2)  # Cuadro inferior derecho
-
+        self.square2_rect1 = (5, 5, 250, 250)     # Subcuadro 1 (superior izquierdo)
+        self.square2_rect2 = (255, 5, 495, 250)   # Subcuadro 2 (superior derecho)
+        self.square2_rect3 = (5, 255, 250, 495)   # Subcuadro 3 (inferior izquierdo)
+        self.square2_rect4 = (255, 255, 495, 495) 
 
         # Frame para los botones inferiores
         self.bottom_frame = tk.Frame(self)
@@ -158,20 +161,27 @@ class Application(tk.Frame):
         print(im.shape,im.dtype)
         YIQ[:,:,2] = np.clip(Y*0.211 +  I *(-0.522) + Q*(0.311),-0.52,0.52)
         # print(im.shape,im.dtype)
-        gray_image = (YIQ[:, :, 0] * 255).astype(np.uint8)  # Escalamos de [0,1] a [0,255]
-        # Convertimos el array de NumPy a imagen con PIL
-        img = Image.fromarray(gray_image)
-        # Redimensionamos para ajustarlo al tamaño del cuadro
-        new_img = img.resize((500, 500))
-        # Convertimos la imagen a un formato que Tkinter puede usar
-        imagen_tk = ImageTk.PhotoImage(new_img)
-        # Mostrar la imagen en un widget Label
-        img1 = Label(self.square2, image=imagen_tk)
-        img1.image = imagen_tk  # Guardar la referencia para evitar que se recoja por el garbage collector
-        img1.pack()
-        self.loaded_image = img 
-        
+          # Convertir los componentes Y, I y Q a imágenes
+        y_image = (YIQ[:, :, 0] * 255).astype(np.uint8)
+        i_image = (YIQ[:, :, 1] * 255).astype(np.uint8)
+        q_image = (YIQ[:, :, 2] * 255).astype(np.uint8)
 
+        # Mostrar en los tres subcuadros correspondientes
+        self.show_image_in_rect(self.square2_rect1, y_image)  # Componente Y
+        self.show_image_in_rect(self.square2_rect2, i_image)  # Componente I
+        self.show_image_in_rect(self.square2_rect3, q_image)  # Componente Q
+        
+    def show_image_in_rect(self, rect_coords, image_array):
+        img = Image.fromarray(image_array)
+        new_img = img.resize((245, 245))
+        imagen_tk = ImageTk.PhotoImage(new_img)
+        self.square2.create_image(
+            (rect_coords[0] + rect_coords[2]) // 2,  # Coordenada x central
+            (rect_coords[1] + rect_coords[3]) // 2,  # Coordenada y central
+            image=imagen_tk
+        )
+        self.square2.image = imagen_tk
+    
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
 app = Application(master=root)
