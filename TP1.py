@@ -40,15 +40,15 @@ class Application(tk.Frame):
         self.button1.pack(pady=5)
 
         # Botón 2
-        self.button2 = tk.Button(self.buttons_frame, text="Procesar", height=2, width=20)
-        self.button2.pack(pady=5)
-        saturacion='0'
-        saturaciones = ['10*10','20*20','50*50','100*100']
-        self.select= ttk.Combobox(self, textvariable=saturacion,values=saturaciones,height=12,width=20)
-        self.select.pack(pady=5)
-        self.select.set(saturacion)
-        self.seleccionado=tk.Label(self,textvariable=saturacion)
-        self.seleccionado.pack(pady=5)
+        # self.button2 = tk.Button(self.buttons_frame, text="Procesar", height=2, width=20)
+        # self.button2.pack(pady=5)
+        # saturacion='0'
+        # saturaciones = ['10*10','20*20','50*50','100*100']
+        # self.select= ttk.Combobox(self, textvariable=saturacion,values=saturaciones,height=12,width=20)
+        # self.select.pack(pady=5)
+        # self.select.set(saturacion)
+        # self.seleccionado=tk.Label(self,textvariable=saturacion)
+        # self.seleccionado.pack(pady=5)
 
         # Botón 3
         self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
@@ -59,7 +59,7 @@ class Application(tk.Frame):
         self.button4.pack(pady=5)
 
         # Botón 5
-        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBaYIQ(imRGB), text="Botón RGB a YIQ", height=2, width=20)
+        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBaYIQ, text="Botón RGB a YIQ", height=2, width=20)
         self.button5.pack(pady=5)
 
         # Cuadro 2 de 500x500 píxeles con borde de líneas de trazos
@@ -173,7 +173,9 @@ class Application(tk.Frame):
             plt.axis('off')
         plt.show()
 
-    def processImageRGBaYIQ(self, im):
+    def processImageRGBaYIQ(self):
+        global imRGB
+        im=imRGB
         YIQ=np.zeros(im.shape)
         YIQ[:,:,0] = np.clip((im[:,:,0]*0.299 +  im[:,:,1] *0.587 + im[:,:,2]*0.114),0.,1.)
         print(im.shape,im.dtype)
