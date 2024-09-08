@@ -74,16 +74,6 @@ class Application(tk.Frame):
             dash=(5, 2)
         )
 
-        # Crear 4 subcuadros dentro de square2 (cada uno de 250x250)
-        self.square2.create_rectangle(5, 5, 250, 250, outline="blue", width=2)  # Cuadro superior izquierdo
-        self.square2.create_rectangle(250, 5, 495, 250, outline="blue", width=2)  # Cuadro superior derecho
-        self.square2.create_rectangle(5, 250, 250, 495, outline="blue", width=2)  # Cuadro inferior izquierdo
-        self.square2.create_rectangle(250, 250, 495, 495, outline="blue", width=2)  # Cuadro inferior derecho
-        self.square2_rect1 = (5, 5, 250, 250)     # Subcuadro 1 (superior izquierdo)
-        self.square2_rect2 = (255, 5, 495, 250)   # Subcuadro 2 (superior derecho)
-        self.square2_rect3 = (5, 255, 250, 495)   # Subcuadro 3 (inferior izquierdo)
-        self.square2_rect4 = (255, 255, 495, 495) 
-
         # Frame para los botones inferiores
         self.bottom_frame = tk.Frame(self)
         self.bottom_frame.pack(side="bottom", fill="x")
@@ -162,7 +152,6 @@ class Application(tk.Frame):
         print(im.shape,im.dtype)
         YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
         titles = ['Canal YIQ','Canal Y','Canal I','Canal Q']
-
         for i in range(4):
             plt.subplot(1,4,i+1)
             if i==0:
@@ -172,38 +161,6 @@ class Application(tk.Frame):
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
-
-    def processImageRGBaYIQ(self):
-        global imRGB
-        im=imRGB
-        YIQ=np.zeros(im.shape)
-        YIQ[:,:,0] = np.clip((im[:,:,0]*0.299 +  im[:,:,1] *0.587 + im[:,:,2]*0.114),0.,1.)
-        print(im.shape,im.dtype)
-        YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
-        print(im.shape,im.dtype)
-        YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
-        titles = ['Canal YIQ','Canal Y','Canal I','Canal Q']
-
-        for i in range(4):
-            plt.subplot(1,4,i+1)
-            if i==0:
-                plt.imshow(YIQ)
-            else:
-                plt.imshow(YIQ[:,:,i-1])
-            plt.title(titles[i])
-            plt.axis('off')
-        plt.show()
-        
-    def show_image_in_rect(self, rect_coords, image_array):
-        img = Image.fromarray(image_array)
-        new_img = img.resize((245, 245))
-        imagen_tk = ImageTk.PhotoImage(new_img)
-        self.square2.create_image(
-            (rect_coords[0] + rect_coords[2]) // 2,  # Coordenada x central
-            (rect_coords[1] + rect_coords[3]) // 2,  # Coordenada y central
-            image=imagen_tk
-        )
-        self.square2.image = imagen_tk
     
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
