@@ -10,7 +10,7 @@ import imageio.v2 as imageio
 from PIL import Image, ImageTk
 
 import os
-
+imRGB = None
 class Application(tk.Frame):
     global url_image
     url_image =""
@@ -35,17 +35,6 @@ class Application(tk.Frame):
         self.buttons_frame = tk.Frame(self.squares_frame)
         self.buttons_frame.pack(side="left", padx=10, pady=10)
 
-        # Botón 2
-        # self.button2 = tk.Button(self.buttons_frame, text="Procesar", height=2, width=20)
-        # self.button2.pack(pady=5)
-        # saturacion='0'
-        # saturaciones = ['10*10','20*20','50*50','100*100']
-        # self.select= ttk.Combobox(self, textvariable=saturacion,values=saturaciones,height=12,width=20)
-        # self.select.pack(pady=5)
-        # self.select.set(saturacion)
-        # self.seleccionado=tk.Label(self,textvariable=saturacion)
-        # self.seleccionado.pack(pady=5)
-
         # Botón 3
         self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
         self.button3.pack(pady=5)
@@ -56,14 +45,18 @@ class Application(tk.Frame):
         self.input_luminancia = tk.Entry(self.buttons_frame)
         self.input_luminancia.pack(pady=5)
 
-        self.label_crominancia = tk.Label(self.buttons_frame, text="Crominancia")
-        self.label_crominancia.pack(pady=5)
-        self.input_crominancia = tk.Entry(self.buttons_frame)
-        self.input_crominancia.pack(pady=5)
+        self.label_saturacion = tk.Label(self.buttons_frame, text="Saturación")
+        self.label_saturacion.pack(pady=5)
+        self.input_saturacion = tk.Entry(self.buttons_frame)
+        self.input_saturacion.pack(pady=5)
 
         # Botón 4
         self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón YIQ", height=2, width=20)
         self.button4.pack(pady=5)
+
+        # Botón 5
+        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBtoBYTE, text="Botón RGB a bytes", height=2, width=20)
+        self.button5.pack(pady=5)
 
         # Botón 1
         self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
@@ -127,51 +120,88 @@ class Application(tk.Frame):
             self.url_image = save_path  # Actualiza la ruta de la imagen guardada
 
     def processImageRGB(self):
-        global imRGB
         global url_image
-        #if not self.url_image:
-         #   messagebox.showwarning("Error", "No se ha cargado ninguna imagen.")
-           # return
         print(f"Ruta de imagen seleccionada: {url_image}")
-        #im = imageio.v2.imread(self.url_image.split('\\').reverse)
+        
         im = imageio.imread(url_image)
-
+        #1.Normalizar los valores de RGB del pixel
+        im = np.clip(im /255.,0.,1.)
         print(im.shape, im.dtype)
 
-        titles = ['Rojo','Verde','Azul']
-        chanels = ['Reds','Greens','Blues']
+        titles = ['RGB','Rojo','Verde','Azul']
+        chanels = ['','Reds','Greens','Blues']
 
-        for i in range(3):
-            plt.subplot(1,3,i+1)
-            plt.imshow(im[:,:,i], cmap=chanels[i])
-            plt.title(titles[i])
-            plt.axis('off')
-        plt.show()
-        imRGB = im
-
-    def processImageYIQ(self):
-        im = imageio.imread(url_image)
-        im = np.clip(im/255,0.,1.)
-        YIQ=np.zeros(im.shape)
-
-        luminancia = float(self.input_luminancia.get()) if self.input_luminancia.get().strip() else 1
-        crominancia = float(self.input_crominancia.get()) if self.input_crominancia.get().strip() else 1
-
-        YIQ[:, :, 0] = np.clip((im[:, :, 0] * 0.299 + im[:, :, 1] * 0.587 + im[:, :, 2] * 0.114), 0., 1.) * luminancia
-        YIQ[:, :, 1] = np.clip(im[:, :, 0] * 0.595 + im[:, :, 1] * (-0.274) + im[:, :, 2] * (-0.321), -0.59, 0.59) * crominancia
-        YIQ[:, :, 2] = np.clip(im[:, :, 0] * 0.211 + im[:, :, 1] * (-0.522) + im[:, :, 2] * (0.311), -0.52, 0.52) * crominancia
-        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
-    
         for i in range(4):
             plt.subplot(1,4,i+1)
             if i==0:
-                plt.imshow(YIQ)
+                plt.imshow(im)
             else:
-                plt.imshow(YIQ[:,:,i-1])
+                plt.imshow(im[:,:,i-1], cmap=chanels[i])
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
-    
+
+    def processImageYIQ(self):
+        global imRGB
+        im = imageio.imread(url_image)
+        #   1.Normalizar los valores de RGB del pixel
+        im = np.clip(im/255,0.,1.)
+        
+        #   2.RGB -> YIQ (utilizando la segunda matriz)
+        YIQ=np.zeros(im.shape)
+
+        YIQ[:, :, 0] = np.clip((im[:, :, 0] * 0.299 + im[:, :, 1] * 0.587 + im[:, :, 2] * 0.114), 0., 1.)
+        YIQ[:, :, 1] = np.clip(im[:, :, 0] * 0.595 + im[:, :, 1] * (-0.274) + im[:, :, 2] * (-0.321), -0.59, 0.59)
+        YIQ[:, :, 2] = np.clip(im[:, :, 0] * 0.211 + im[:, :, 1] * (-0.522) + im[:, :, 2] * (0.311), -0.52, 0.52) 
+
+        a = float(self.input_luminancia.get()) if self.input_luminancia.get().strip() else 1
+        b = float(self.input_saturacion.get()) if self.input_saturacion.get().strip() else 1
+
+        #   3-5. Y’ := aY ;  con Y’ <= 1 (para que no se vaya de rango)
+        #   4-6. I’ := bI ; con -0.5957 < I’ < 0.5957   Q’ := bQ ; con -0.5226 < Q’ < 0.5226
+
+        YIQ[:,:,0] = np.clip(a * YIQ[:, :, 0], 0, 1)
+        YIQ[:,:,1] = np.clip(b * YIQ[:,:,1], -0.5957, 0.5957)
+        YIQ[:,:,2] = np.clip(b * YIQ[:,:,2], -0.5226, 0.5226)
+
+        #   7. Y’I’Q’ -> R’G’B’ (el RGB normalizado del pixel procesado)
+        img = np.clip(im /255.,0.,1.) 
+        RGB=np.zeros(img.shape)
+        RGB[:,:,0] = np.clip(YIQ[:,:,0] + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,1] = np.clip(YIQ[:,:,0] - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,2] = np.clip(YIQ[:,:,0] - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
+
+        imRGB = RGB
+        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
+        for i in range(4):
+            plt.subplot(1,4,i+1)
+            if i==0:
+                plt.imshow(RGB)
+            else:
+                plt.imshow(RGB[:,:,i-1])
+            plt.title(titles[i])
+            plt.axis('off')
+        plt.show()
+
+    def processImageRGBtoBYTE(self):
+        global imRGB
+        if imRGB is None or imRGB.size() == 0:
+           messagebox.showinfo("Error", "No se ha cargado ninguna imagen.")
+           return
+        #   8.Convertir R’G’B’ a bytes y graficar el pixel
+        rgb_bytes = np.uint8(imRGB * 255)
+
+        titles = ['Canal RGB procesado', 'Canal R', 'Canal G', 'Canal B']
+        for i in range(4):
+            plt.subplot(1,4,i+1)
+            if i==0:
+                plt.imshow(rgb_bytes)
+            else:
+                plt.imshow(rgb_bytes[:,:,i-1])
+            plt.title(titles[i])
+            plt.axis('off')
+        plt.show()
+
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
 app = Application(master=root)
