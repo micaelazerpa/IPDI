@@ -35,10 +35,6 @@ class Application(tk.Frame):
         self.buttons_frame = tk.Frame(self.squares_frame)
         self.buttons_frame.pack(side="left", padx=10, pady=10)
 
-        # Botón 1
-        self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
-        self.button1.pack(pady=5)
-
         # Botón 2
         # self.button2 = tk.Button(self.buttons_frame, text="Procesar", height=2, width=20)
         # self.button2.pack(pady=5)
@@ -54,13 +50,24 @@ class Application(tk.Frame):
         self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
         self.button3.pack(pady=5)
 
+        # Inputs para los valores numéricos
+        self.label_luminancia = tk.Label(self.buttons_frame, text="Luminancia")
+        self.label_luminancia.pack(pady=5)
+        self.input_luminancia = tk.Entry(self.buttons_frame)
+        self.input_luminancia.pack(pady=5)
+
+        self.label_crominancia = tk.Label(self.buttons_frame, text="Crominancia")
+        self.label_crominancia.pack(pady=5)
+        self.input_crominancia = tk.Entry(self.buttons_frame)
+        self.input_crominancia.pack(pady=5)
+
         # Botón 4
         self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón YIQ", height=2, width=20)
         self.button4.pack(pady=5)
 
-        # Botón 5
-        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBaYIQ, text="Botón RGB a YIQ", height=2, width=20)
-        self.button5.pack(pady=5)
+        # Botón 1
+        self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
+        self.button1.pack(pady=5)
 
         # Cuadro 2 de 500x500 píxeles con borde de líneas de trazos
         self.square2 = tk.Canvas(self.squares_frame, width=500, height=500, bg="white")
@@ -146,12 +153,15 @@ class Application(tk.Frame):
         im = imageio.imread(url_image)
         im = np.clip(im/255,0.,1.)
         YIQ=np.zeros(im.shape)
-        YIQ[:,:,0] = np.clip((im[:,:,0]*0.299 +  im[:,:,1] *0.587 + im[:,:,2]*0.114),0.,1.)
-        print(im.shape,im.dtype)
-        YIQ[:,:,1] = np.clip(im[:,:,0]*0.595 +  im[:,:,1] *(-0.274) + im[:,:,2]*(-0.321),-0.59,0.59)
-        print(im.shape,im.dtype)
-        YIQ[:,:,2] = np.clip(im[:,:,0]*0.211 +  im[:,:,1] *(-0.522) + im[:,:,2]*(0.311),-0.52,0.52)
-        titles = ['Canal YIQ','Canal Y','Canal I','Canal Q']
+
+        luminancia = float(self.input_luminancia.get()) if self.input_luminancia.get().strip() else 1
+        crominancia = float(self.input_crominancia.get()) if self.input_crominancia.get().strip() else 1
+
+        YIQ[:, :, 0] = np.clip((im[:, :, 0] * 0.299 + im[:, :, 1] * 0.587 + im[:, :, 2] * 0.114), 0., 1.) * luminancia
+        YIQ[:, :, 1] = np.clip(im[:, :, 0] * 0.595 + im[:, :, 1] * (-0.274) + im[:, :, 2] * (-0.321), -0.59, 0.59) * crominancia
+        YIQ[:, :, 2] = np.clip(im[:, :, 0] * 0.211 + im[:, :, 1] * (-0.522) + im[:, :, 2] * (0.311), -0.52, 0.52) * crominancia
+        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
+    
         for i in range(4):
             plt.subplot(1,4,i+1)
             if i==0:
