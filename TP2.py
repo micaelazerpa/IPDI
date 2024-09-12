@@ -10,7 +10,15 @@ import imageio.v2 as imageio
 from PIL import Image, ImageTk
 
 import os
+
+imgIO = None
 imRGB = None
+process =None
+image = None
+
+imA= None
+imB= None
+
 class Application(tk.Frame):
     global url_image
     url_image =""
@@ -23,6 +31,7 @@ class Application(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
+        global process
         # Frame que contendrá los dos cuadros y los botones
         self.squares_frame = tk.Frame(self)
         self.squares_frame.pack(side="top", fill="both", expand=True)
@@ -31,7 +40,7 @@ class Application(tk.Frame):
         self.square1 = tk.Frame(self.squares_frame, width=500, height=500, bg="lightblue")
         self.square1.pack(side="left", padx=10, pady=10)
 
-        # Cuadro 2 de 500x500 píxeles con borde de líneas de trazos
+        # Cuadro 2 de 500x500 píxeles 
         self.square2 = tk.Canvas(self.squares_frame, width=500, height=500, bg="lightblue")
         self.square2.pack(side="left", padx=10, pady=10)
 
@@ -54,6 +63,9 @@ class Application(tk.Frame):
         # Botón para salir
         self.out = tk.Button(self.bottom_frame, text="Salir", command=self.close, height=2, width=20)
         self.out.pack(side="right", padx=10)
+
+        self.message= tk.Label(self.bottom_frame, text=f"Imagenes subidas en {process}")
+        self.message.pack(side="top")
 
         # Botón 3
         self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
@@ -82,19 +94,37 @@ class Application(tk.Frame):
         self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
         self.button1.pack(pady=5)
 
+        # Crea el Combobox para Operaciones
+        options = ["Suma clampeada", "Resta clampeada", "Suma promediada", "Resta promediada", "Producto", "Cociente", "Resta en valor absoluto", "If darker", "If ligther"]
+        self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
+        self.comboboxOperations.set("Suma clampeada")  
+        self.comboboxOperations.pack(side="left", padx=10)
+
+        self.buttonC = tk.Button(self.bottom_frame, command=self.process_arithmetic, text='Procesar', height=2, width=28)
+        self.buttonC.pack(side="left", padx=10)
+        
+
     def upload_image(self, type):
-        global url_image
+        global url_image, process, image
+
         url_image = filedialog.askopenfilename(filetypes=[("Archivos de imagen", "*.jpg;*.jpeg;*.png;*.bmp;*.gif")])
         print(f"Upload de imagen seleccionada: {url_image}")
         
         if url_image: 
+            process = 'RGB'
+            self.message.config(text=f"Imagen guardada en {process}")
             if (type == 'A'):
                 self.show_image(url_image, type)
             else:
                 self.show_image(url_image, type)
-
+        image = url_image
+    
+    def resize_image(self, img, target_shape):
+        img_resized = img.resize(target_shape, Image.Resampling.LANCZOS)
+        return np.array(img_resized)
 
     def show_image(self, url_image, type):
+        global imA, imB, imgIO
         print(f"Show de imagen seleccionada: {url_image}")
 
         imgIO = imageio.imread(url_image)
@@ -104,8 +134,10 @@ class Application(tk.Frame):
 
         if (type == 'A'):
             img1 = Label(self.square1, image=imagen_tk)
+            imA=imgIO
         else:
             img1 = Label(self.square2, image=imagen_tk)
+            imB=imgIO
 
         img1.image = imagen_tk
         img1.pack()
@@ -124,12 +156,9 @@ class Application(tk.Frame):
             self.url_image = save_path  # Actualiza la ruta de la imagen guardada
 
     def processImageRGB(self):
-        global url_image
-        print(f"Ruta de imagen seleccionada: {url_image}")
-        
-        im = imageio.imread(url_image)
+        global imgIO
         #1.Normalizar los valores de RGB del pixel
-        im = np.clip(im /255.,0.,1.)
+        im = np.clip(imgIO /255.,0.,1.)
         print(im.shape, im.dtype)
 
         titles = ['RGB','Rojo','Verde','Azul']
@@ -146,10 +175,9 @@ class Application(tk.Frame):
         plt.show()
 
     def processImageYIQ(self):
-        global imRGB
-        im = imageio.imread(url_image)
+        global imRGB, process, imA, imB, imgIO
         #   1.Normalizar los valores de RGB del pixel
-        im = np.clip(im/255,0.,1.)
+        im = np.clip(imgIO/255,0.,1.)
         
         #   2.RGB -> YIQ (utilizando la segunda matriz)
         YIQ=np.zeros(im.shape)
@@ -181,6 +209,9 @@ class Application(tk.Frame):
             plt.subplot(1,4,i+1)
             if i==0:
                 plt.imshow(RGB)
+                process='YIQ'
+                self.message.config(text=f"Imagen guardada en {process}")
+                imB = RGB
             else:
                 plt.imshow(RGB[:,:,i-1])
             plt.title(titles[i])
@@ -205,6 +236,80 @@ class Application(tk.Frame):
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
+
+    # Funciones para cada operación
+    def suma_clampeada(self):
+        global imA, imB
+        print("Ejecutando Suma Clampeada")
+        
+        imC = np.zeros(imA.shape)
+
+        imC[:, :, 0] = np.clip(imA[:, :, 0] + imB[:, :, 0], 0., 1.)
+        imC[:, :, 1] = np.clip(imA[:, :, 1] + imB[:, :, 1], 0., 1.)
+        imC[:, :, 2] = np.clip(imA[:, :, 2] + imB[:, :, 2], 0., 1.)
+        plt.imshow(imC)
+        plt.show()
+
+    def resta_clampeada(self):
+        print("Ejecutando Resta Clampeada")
+
+    def suma_promediada(self):
+        print("Ejecutando Suma Promediada")
+
+    def resta_promediada(self):
+        print("Ejecutando Resta Promediada")
+
+    def producto(self):
+        print("Ejecutando Producto")
+
+    def cociente(self):
+        print("Ejecutando Cociente")
+
+    def resta_valor_absoluto(self):
+        print("Ejecutando Resta en Valor Absoluto")
+
+    def if_darker(self):
+        print("Ejecutando If Darker")
+
+    def if_lighter(self):
+        print("Ejecutando If Lighter")
+
+    # Función para procesar la operación según la selección
+    def process_arithmetic(self):
+        global imA, imB
+        selection= self.comboboxOperations.get()
+        print(f"Operación seleccionada: {selection}")
+
+        if imA is not None and imB is not None:
+        # Asegúrate de que las imágenes tienen el mismo tamaño
+            if imA.shape != imB.shape:
+                # Redimensionar imágenes para que tengan el mismo tamaño
+                new_size = (min(imA.shape[1], imB.shape[1]), min(imA.shape[0], imB.shape[0]))
+                imA = self.resize_image(Image.fromarray(imA), new_size)
+                imB = self.resize_image(Image.fromarray(imB), new_size)
+
+            match selection:
+                case "Suma clampeada":
+                    self.suma_clampeada()
+                case "Resta clampeada":
+                    self.resta_clampeada()
+                case "Suma promediada":
+                    self.suma_promediada()
+                case "Resta promediada":
+                    self.resta_promediada()
+                case "Producto":
+                    self.producto()
+                case "Cociente":
+                    self.cociente()
+                case "Resta en valor absoluto":
+                    self.resta_valor_absoluto()
+                case "If darker":
+                    self.if_darker()
+                case "If lighter":
+                    self.if_lighter()
+                case _:
+                    print("Opción inválida")
+
 
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
