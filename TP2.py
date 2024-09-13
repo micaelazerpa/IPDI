@@ -387,17 +387,14 @@ class Application(tk.Frame):
     def if_darker(self, A, B):
         print("Ejecutando If Darker")
         YIQ_A = self.imageRGBtoYIQ(A)
+        #YIQ_A = self.processImageRGBtoBYTE(YIQ_A)
         YIQ_B = self.imageRGBtoYIQ(B)
+        #YIQ_B = self.processImageRGBtoBYTE(YIQ_B)
         
         YIQ_C = np.zeros(imA.shape)
-        if (YIQ_A[:,:,0] < YIQ_B[:,:,0]):
-            YIQ_C[:,:,0] = YIQ_A[:,:,0]
-            YIQ_C[:,:,1] = YIQ_A[:,:,1]
-            YIQ_C[:,:,2] = YIQ_A[:,:,2]
-        else:
-            YIQ_C[:,:,0] = YIQ_B[:,:,0]
-            YIQ_C[:,:,1] = YIQ_B[:,:,1]
-            YIQ_C[:,:,2] = YIQ_B[:,:,2]
+        YIQ_C[:, :, 0] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 0], YIQ_B[:, :, 0])
+        YIQ_C[:, :, 1] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 1], YIQ_B[:, :, 1])
+        YIQ_C[:, :, 2] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 2], YIQ_B[:, :, 2])
 
         C= self.imageYIQtoRGB(YIQ_C)
 
@@ -411,14 +408,9 @@ class Application(tk.Frame):
         YIQ_B = self.imageRGBtoYIQ(B)
         
         YIQ_C = np.zeros(imA.shape)
-        if (YIQ_A[:,:,0] > YIQ_B[:,:,0]):
-            YIQ_C[:,:,0] = YIQ_A[:,:,0]
-            YIQ_C[:,:,1] = YIQ_A[:,:,1]
-            YIQ_C[:,:,2] = YIQ_A[:,:,2]
-        else:
-            YIQ_C[:,:,0] = YIQ_B[:,:,0]
-            YIQ_C[:,:,1] = YIQ_B[:,:,1]
-            YIQ_C[:,:,2] = YIQ_B[:,:,2]
+        YIQ_C[:, :, 0] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 0], YIQ_B[:, :, 0])
+        YIQ_C[:, :, 1] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 1], YIQ_B[:, :, 1])
+        YIQ_C[:, :, 2] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 2], YIQ_B[:, :, 2])
 
         C= self.imageYIQtoRGB(YIQ_C)
 
@@ -461,7 +453,7 @@ class Application(tk.Frame):
                     self.resta_valor_absoluto()
                 case "If darker":
                     self.if_darker(imA, imB)
-                case "If lighter":
+                case "If ligther":
                     self.if_lighter(imA, imB)
                 case _:
                     print("Opción inválida")
