@@ -185,22 +185,22 @@ class Application(tk.Frame):
 
     def processImageRGBtoBYTE(self):
         global imRGB
-        if imRGB is None or imRGB.size() == 0:
+        if imRGB is None or imRGB.size == 0:
            messagebox.showinfo("Error", "No se ha cargado ninguna imagen.")
-           return
-        #   8.Convertir R’G’B’ a bytes y graficar el pixel
-        rgb_bytes = np.uint8(imRGB * 255)
+            #   8.Convertir R’G’B’ a bytes y graficar el pixel
+        else: 
+            rgb_bytes = np.uint8(imRGB * 255)
 
-        titles = ['Canal RGB procesado', 'Canal R', 'Canal G', 'Canal B']
-        for i in range(4):
-            plt.subplot(1,4,i+1)
-            if i==0:
-                plt.imshow(rgb_bytes)
-            else:
-                plt.imshow(rgb_bytes[:,:,i-1])
-            plt.title(titles[i])
-            plt.axis('off')
-        plt.show()
+            titles = ['Canal RGB procesado', 'Canal R', 'Canal G', 'Canal B']
+            for i in range(4):
+                plt.subplot(1,4,i+1)
+                if i==0:
+                    plt.imshow(rgb_bytes)
+                else:
+                    plt.imshow(rgb_bytes[:,:,i-1])
+                plt.title(titles[i])
+                plt.axis('off')
+            plt.show()
 
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
