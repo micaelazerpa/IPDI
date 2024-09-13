@@ -264,6 +264,8 @@ class Application(tk.Frame):
     # Funciones para cada operación
     def suma_clampeada(self, A, B):
         print("Ejecutando Suma Clampeada")
+        A = (A/255.0)
+        B = (B/255.0)
         
         C = np.zeros(A.shape)
 
@@ -281,6 +283,8 @@ class Application(tk.Frame):
 
     def resta_clampeada(self, A, B):
         print("Ejecutando Resta Clampeada")
+        A = (A/255.0)
+        B = (B/255.0)
         C = np.zeros(A.shape)
 
         if (process == 'RGB'):
@@ -297,10 +301,12 @@ class Application(tk.Frame):
 
     def suma_promediada(self, A, B):
         print("Ejecutando Suma Promediada")
+        A = (A/255.0)
+        B = (B/255.0)
         C = np.zeros(A.shape)
 
         if (process == 'RGB'):
-            C = ((A + B)/2)
+            C = np.clip((A + B)/2)
         
         if (process == 'YIQ'):
             C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
@@ -315,9 +321,10 @@ class Application(tk.Frame):
 
     def resta_promediada(self, A, B):
         print("Ejecutando Resta Promediada")
-
+        A = (A/255.0)
+        B = (B/255.0)
         if (process == 'RGB'):
-            C = ((A - B)/2)
+            C = np.clip((A - B)/2)
         
         if (process == 'YIQ'):
             C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
