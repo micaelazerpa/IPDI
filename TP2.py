@@ -191,9 +191,12 @@ class Application(tk.Frame):
         YIQ[:,:,1] = np.clip(b * YIQ[:,:,1], -0.5957, 0.5957)
         YIQ[:,:,2] = np.clip(b * YIQ[:,:,2], -0.5226, 0.5226)
 
+        return YIQ
+    
+    def imageYIQtoRGB(self, YIQ):        
         #   7. Y’I’Q’ -> R’G’B’ (el RGB normalizado del pixel procesado)
-        img = np.clip(im /255.,0.,1.) 
-        RGB=np.zeros(img.shape)
+        print('Entro a convertir en RGB')
+        RGB=np.zeros(YIQ.shape)
         RGB[:,:,0] = np.clip(YIQ[:,:,0] + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
         RGB[:,:,1] = np.clip(YIQ[:,:,0] - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
         RGB[:,:,2] = np.clip(YIQ[:,:,0] - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
@@ -210,37 +213,40 @@ class Application(tk.Frame):
         return RGB_BYTE
 
     def processImageYIQ(self):
-        global imA, imB
+        global imA, imB, process
 
         # Procesar la primera imagen (imA)
         YIQ_A= self.imageRGBtoYIQ(imA)
         imA = self.processImageRGBtoBYTE(YIQ_A)
+
         # Procesar la segunda imagen (imB)
         YIQ_B= self.imageRGBtoYIQ(imB)
         imB = self.processImageRGBtoBYTE(YIQ_B)
         process='YIQ'
-        self.message.config(text=f"Imagen guardada en {process}")
+        self.message.config(text=f"Imagenes guardadas en {process}")
         
         titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
 
         plt.figure(figsize=(10, 5))
         # Visualización de la imagen A
+        RGB_A= self.imageYIQtoRGB(YIQ_A)
         for i in range(4):
             plt.subplot(2, 4, i + 1)  # Fila 1 para imA
             if i == 0:
-                plt.imshow(YIQ_A)
+                plt.imshow(RGB_A)
             else:
-                plt.imshow(YIQ_A[:, :, i - 1])
+                plt.imshow(RGB_A[:, :, i - 1])
             plt.title(f"Imagen A - {titles[i]}")
             plt.axis('off')
 
         # Visualización de la imagen B
+        RGB_B= self.imageYIQtoRGB(YIQ_B)
         for i in range(4):
             plt.subplot(2, 4, i + 5)  # Fila 2 para imB
             if i == 0:
-                plt.imshow(YIQ_B)
+                plt.imshow(RGB_B)
             else:
-                plt.imshow(YIQ_B[:, :, i - 1])
+                plt.imshow(RGB_B[:, :, i - 1])
             plt.title(f"Imagen B - {titles[i]}")
             plt.axis('off')
 
@@ -263,56 +269,69 @@ class Application(tk.Frame):
     
     # Funciones para cada operación
     def suma_clampeada(self, A, B):
+        global process
         print("Ejecutando Suma Clampeada")
-        A = (A/255.0)
-        B = (B/255.0)
         
         C = np.zeros(A.shape)
 
         if (process == 'RGB'):
-            C = np.clip(A + B, 0., 1.)
+            print("Ejecutando Suma de RGB")
+            A = (A/255.0)
+            B = (B/255.0)
+            C = np.clip(A + B)
 
         if (process == 'YIQ'):
-            C [:,:,0]= np.clip(A[:, :, 0] + B[:, :, 0], 0., 1.)
+            print("Ejecutando Suma de YIQ")
+            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0]),0.,1.)
             C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
             C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+            C= self.imageYIQtoRGB(C)
 
         plt.imshow(C)
         plt.title('Suma Clampeada')
         plt.show()
 
     def resta_clampeada(self, A, B):
+        global process
+
         print("Ejecutando Resta Clampeada")
         A = (A/255.0)
         B = (B/255.0)
         C = np.zeros(A.shape)
 
         if (process == 'RGB'):
-            C = np.clip(A - B, 0., 1.)
+            print("Ejecutando Resta de RGB")
+            C = np.clip(A - B, 0, 255)
         
         if (process == 'YIQ'):
+            print("Ejecutando Resta de YIQ")
             C [:,:,0]= np.clip(A[:, :, 0] + B[:, :, 0], 0., 1.)
             C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
             C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+            C= self.imageYIQtoRGB(C)
     
         plt.imshow(C)
         plt.title('Resta Clampeada')
         plt.show()
 
     def suma_promediada(self, A, B):
+        global process
+
         print("Ejecutando Suma Promediada")
         A = (A/255.0)
         B = (B/255.0)
         C = np.zeros(A.shape)
 
         if (process == 'RGB'):
+            print("Ejecutando Suma de RGB")
             C = np.clip((A + B)/2)
         
         if (process == 'YIQ'):
+            print("Ejecutando Suma de YIQ")
             C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
-            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
-            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
-    
+            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
+            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
+            C= self.imageYIQtoRGB(C)
         
         plt.imshow(C)
         plt.title('Suma Promediada')
@@ -320,16 +339,22 @@ class Application(tk.Frame):
 
 
     def resta_promediada(self, A, B):
+        global process
+
         print("Ejecutando Resta Promediada")
         A = (A/255.0)
         B = (B/255.0)
         if (process == 'RGB'):
+            print("Ejecutando Resta de RGB")
             C = np.clip((A - B)/2)
         
         if (process == 'YIQ'):
+            print("Ejecutando Resta de YIQ")
             C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
             C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
             C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+            C= self.imageYIQtoRGB(C)
+
         plt.imshow(C)
         plt.title('Resta Promediada')
         plt.show()
@@ -358,18 +383,48 @@ class Application(tk.Frame):
         plt.show()
     def resta_valor_absoluto(self, A, B):
         print("Ejecutando Resta en Valor Absoluto")
-        C = np.abs(A.astype(np.int16) - B.astype(np.int16))
-        C = np.clip(C, 0, 255).astype(np.uint8)
+
+    def if_darker(self, A, B):
+        print("Ejecutando If Darker")
+        YIQ_A = self.imageRGBtoYIQ(A)
+        YIQ_B = self.imageRGBtoYIQ(B)
+        
+        YIQ_C = np.zeros(imA.shape)
+        if (YIQ_A[:,:,0] < YIQ_B[:,:,0]):
+            YIQ_C[:,:,0] = YIQ_A[:,:,0]
+            YIQ_C[:,:,1] = YIQ_A[:,:,1]
+            YIQ_C[:,:,2] = YIQ_A[:,:,2]
+        else:
+            YIQ_C[:,:,0] = YIQ_B[:,:,0]
+            YIQ_C[:,:,1] = YIQ_B[:,:,1]
+            YIQ_C[:,:,2] = YIQ_B[:,:,2]
+
+        C= self.imageYIQtoRGB(YIQ_C)
+
         plt.imshow(C)
-        plt.title('Cociente')
+        plt.title('If Darker')
         plt.show()
 
-    def if_darker(self):
-        print("Ejecutando If Darker")
-
-    def if_lighter(self):
+    def if_lighter(self, A, B):
         print("Ejecutando If Lighter")
+        YIQ_A = self.imageRGBtoYIQ(A)
+        YIQ_B = self.imageRGBtoYIQ(B)
+        
+        YIQ_C = np.zeros(imA.shape)
+        if (YIQ_A[:,:,0] > YIQ_B[:,:,0]):
+            YIQ_C[:,:,0] = YIQ_A[:,:,0]
+            YIQ_C[:,:,1] = YIQ_A[:,:,1]
+            YIQ_C[:,:,2] = YIQ_A[:,:,2]
+        else:
+            YIQ_C[:,:,0] = YIQ_B[:,:,0]
+            YIQ_C[:,:,1] = YIQ_B[:,:,1]
+            YIQ_C[:,:,2] = YIQ_B[:,:,2]
 
+        C= self.imageYIQtoRGB(YIQ_C)
+
+        plt.imshow(C)
+        plt.title('If Lighter')
+        plt.show()
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
         global imA, imB
@@ -399,15 +454,15 @@ class Application(tk.Frame):
                 case "Resta promediada":
                     self.resta_promediada(imA, imB)
                 case "Producto":
-                    self.producto(imA,imB)
+                    self.producto(imA, imB)
                 case "Cociente":
-                    self.cociente(imA,imB)
+                    self.cociente(imA, imB)
                 case "Resta en valor absoluto":
-                    self.resta_valor_absoluto(imA,imB)
+                    self.resta_valor_absoluto()
                 case "If darker":
-                    self.if_darker()
+                    self.if_darker(imA, imB)
                 case "If lighter":
-                    self.if_lighter()
+                    self.if_lighter(imA, imB)
                 case _:
                     print("Opción inválida")
 
