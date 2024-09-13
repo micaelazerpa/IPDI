@@ -83,12 +83,12 @@ class Application(tk.Frame):
         self.input_saturacion.pack(pady=5)
 
         # Botón 4
-        self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón YIQ", height=2, width=20)
+        self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón RGB a YIQ", height=2, width=20)
         self.button4.pack(pady=5)
 
-        # Botón 5
-        self.button5 = tk.Button(self.buttons_frame, command=self.processImageRGBtoBYTE, text="Botón RGB a bytes", height=2, width=20)
-        self.button5.pack(pady=5)
+        # Botón 4
+        # self.button6 = tk.Button(self.buttons_frame, command=self.imageYIQtoRGB, text="Botón YIQ a RGB", height=2, width=20)
+        # self.button6.pack(pady=5)
 
         # Botón 1
         self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
@@ -112,16 +112,12 @@ class Application(tk.Frame):
         
         if url_image: 
             process = 'RGB'
-            self.message.config(text=f"Imagen guardada en {process}")
+            self.message.config(text=f"Imágenes guardadas en {process}")
             if (type == 'A'):
                 self.show_image(url_image, type)
             else:
                 self.show_image(url_image, type)
         image = url_image
-    
-    def resize_image(self, img, target_shape):
-        img_resized = img.resize(target_shape, Image.Resampling.LANCZOS)
-        return np.array(img_resized)
 
     def show_image(self, url_image, type):
         global imA, imB, imgIO
@@ -174,10 +170,9 @@ class Application(tk.Frame):
             plt.axis('off')
         plt.show()
 
-    def processImageYIQ(self):
-        global imRGB, process, imA, imB, imgIO
+    def imageRGBtoYIQ(self, image):
         #   1.Normalizar los valores de RGB del pixel
-        im = np.clip(imgIO/255,0.,1.)
+        im = np.clip(image/255,0.,1.)
         
         #   2.RGB -> YIQ (utilizando la segunda matriz)
         YIQ=np.zeros(im.shape)
@@ -203,69 +198,143 @@ class Application(tk.Frame):
         RGB[:,:,1] = np.clip(YIQ[:,:,0] - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
         RGB[:,:,2] = np.clip(YIQ[:,:,0] - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
 
-        imRGB = RGB
-        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
-        for i in range(4):
-            plt.subplot(1,4,i+1)
-            if i==0:
-                plt.imshow(RGB)
-                process='YIQ'
-                self.message.config(text=f"Imagen guardada en {process}")
-                imB = RGB
-            else:
-                plt.imshow(RGB[:,:,i-1])
-            plt.title(titles[i])
-            plt.axis('off')
-        plt.show()
+        return RGB
 
-    def processImageRGBtoBYTE(self):
-        global imRGB
-        if imRGB is None or imRGB.size() == 0:
+    def processImageRGBtoBYTE(self, image):
+        # Convierte el tipo de dato a uint8 (enteros sin signo de 8 bits)
+        if image is None or image.size == 0:
            messagebox.showinfo("Error", "No se ha cargado ninguna imagen.")
            return
         #   8.Convertir R’G’B’ a bytes y graficar el pixel
-        rgb_bytes = np.uint8(imRGB * 255)
+        RGB_BYTE = np.uint8(image * 255)
+        return RGB_BYTE
 
-        titles = ['Canal RGB procesado', 'Canal R', 'Canal G', 'Canal B']
+    def processImageYIQ(self):
+        global imA, imB
+
+        # Procesar la primera imagen (imA)
+        YIQ_A= self.imageRGBtoYIQ(imA)
+        imA = self.processImageRGBtoBYTE(YIQ_A)
+        # Procesar la segunda imagen (imB)
+        YIQ_B= self.imageRGBtoYIQ(imB)
+        imB = self.processImageRGBtoBYTE(YIQ_B)
+        process='YIQ'
+        self.message.config(text=f"Imagen guardada en {process}")
+        
+        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
+
+        plt.figure(figsize=(10, 5))
+        # Visualización de la imagen A
         for i in range(4):
-            plt.subplot(1,4,i+1)
-            if i==0:
-                plt.imshow(rgb_bytes)
+            plt.subplot(2, 4, i + 1)  # Fila 1 para imA
+            if i == 0:
+                plt.imshow(YIQ_A)
             else:
-                plt.imshow(rgb_bytes[:,:,i-1])
-            plt.title(titles[i])
+                plt.imshow(YIQ_A[:, :, i - 1])
+            plt.title(f"Imagen A - {titles[i]}")
             plt.axis('off')
+
+        # Visualización de la imagen B
+        for i in range(4):
+            plt.subplot(2, 4, i + 5)  # Fila 2 para imB
+            if i == 0:
+                plt.imshow(YIQ_B)
+            else:
+                plt.imshow(YIQ_B[:, :, i - 1])
+            plt.title(f"Imagen B - {titles[i]}")
+            plt.axis('off')
+
         plt.show()
 
+
+    def resize_image(self, img, target_shape):
+        img_resized = img.resize(target_shape, Image.Resampling.LANCZOS)
+        return np.array(img_resized)
+    
+    def ensure_rgb(self, image):
+        #Para que la imagen tenga 3 canales
+        if image.shape[2] > 3:
+            # Si hay más de 3 canales, solo toma los primeros 3
+            image = image[:, :, :3]
+        elif image.shape[2] < 3:
+            # Si hay menos de 3 canales, convierte la imagen a RGB
+            image = np.dstack([image] * 3)
+        return image
+    
     # Funciones para cada operación
-    def suma_clampeada(self):
-        global imA, imB
+    def suma_clampeada(self, A, B):
         print("Ejecutando Suma Clampeada")
         
-        imC = np.zeros(imA.shape)
+        C = np.zeros(A.shape)
 
-        imC[:, :, 0] = np.clip(imA[:, :, 0] + imB[:, :, 0], 0., 1.)
-        imC[:, :, 1] = np.clip(imA[:, :, 1] + imB[:, :, 1], 0., 1.)
-        imC[:, :, 2] = np.clip(imA[:, :, 2] + imB[:, :, 2], 0., 1.)
-        plt.imshow(imC)
+        if (process == 'RGB'):
+            C = np.clip(A + B, 0., 1.)
+
+        if (process == 'YIQ'):
+            C [:,:,0]= np.clip(A[:, :, 0] + B[:, :, 0], 0., 1.)
+            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
+            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+
+        plt.imshow(C)
+        plt.title('Suma Clampeada')
         plt.show()
 
-    def resta_clampeada(self):
+    def resta_clampeada(self, A, B):
         print("Ejecutando Resta Clampeada")
+        C = np.zeros(A.shape)
 
-    def suma_promediada(self):
+        if (process == 'RGB'):
+            C = np.clip(A - B, 0., 1.)
+        
+        if (process == 'YIQ'):
+            C [:,:,0]= np.clip(A[:, :, 0] + B[:, :, 0], 0., 1.)
+            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
+            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+    
+        plt.imshow(C)
+        plt.title('Resta Clampeada')
+        plt.show()
+
+    def suma_promediada(self, A, B):
         print("Ejecutando Suma Promediada")
+        C = np.zeros(A.shape)
 
-    def resta_promediada(self):
+        if (process == 'RGB'):
+            C = ((A + B)/2)
+        
+        if (process == 'YIQ'):
+            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
+            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
+            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+    
+        
+        plt.imshow(C)
+        plt.title('Suma Promediada')
+        plt.show()
+
+
+    def resta_promediada(self, A, B):
         print("Ejecutando Resta Promediada")
 
-    def producto(self):
+        if (process == 'RGB'):
+            C = ((A - B)/2)
+        
+        if (process == 'YIQ'):
+            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2, 0., 1.)
+            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
+            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
+        plt.imshow(C)
+        plt.title('Resta Promediada')
+        plt.show()
+
+
+    def producto(self, A, B):
         print("Ejecutando Producto")
 
-    def cociente(self):
+    def cociente(self, A, B):
         print("Ejecutando Cociente")
 
-    def resta_valor_absoluto(self):
+    def resta_valor_absoluto(self, A, B):
         print("Ejecutando Resta en Valor Absoluto")
 
     def if_darker(self):
@@ -281,22 +350,27 @@ class Application(tk.Frame):
         print(f"Operación seleccionada: {selection}")
 
         if imA is not None and imB is not None:
-        # Asegúrate de que las imágenes tienen el mismo tamaño
             if imA.shape != imB.shape:
                 # Redimensionar imágenes para que tengan el mismo tamaño
                 new_size = (min(imA.shape[1], imB.shape[1]), min(imA.shape[0], imB.shape[0]))
                 imA = self.resize_image(Image.fromarray(imA), new_size)
                 imB = self.resize_image(Image.fromarray(imB), new_size)
 
+            imA = self.ensure_rgb(imA)
+            imB = self.ensure_rgb(imB)
+                
+            print(f"Redimensiones imagen A-----: {imA.shape}")
+            print(f"Redimensiones imagen B-----: {imB.shape}")
+
             match selection:
                 case "Suma clampeada":
-                    self.suma_clampeada()
+                    self.suma_clampeada(imA, imB)
                 case "Resta clampeada":
-                    self.resta_clampeada()
+                    self.resta_clampeada(imA, imB)
                 case "Suma promediada":
-                    self.suma_promediada()
+                    self.suma_promediada(imA, imB)
                 case "Resta promediada":
-                    self.resta_promediada()
+                    self.resta_promediada(imA, imB)
                 case "Producto":
                     self.producto()
                 case "Cociente":
