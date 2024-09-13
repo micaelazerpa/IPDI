@@ -358,6 +358,11 @@ class Application(tk.Frame):
         plt.show()
     def resta_valor_absoluto(self, A, B):
         print("Ejecutando Resta en Valor Absoluto")
+        C = np.abs(A.astype(np.int16) - B.astype(np.int16))
+        C = np.clip(C, 0, 255).astype(np.uint8)
+        plt.imshow(C)
+        plt.title('Cociente')
+        plt.show()
 
     def if_darker(self):
         print("Ejecutando If Darker")
@@ -398,7 +403,7 @@ class Application(tk.Frame):
                 case "Cociente":
                     self.cociente(imA,imB)
                 case "Resta en valor absoluto":
-                    self.resta_valor_absoluto()
+                    self.resta_valor_absoluto(imA,imB)
                 case "If darker":
                     self.if_darker()
                 case "If lighter":
