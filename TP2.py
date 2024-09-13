@@ -330,10 +330,25 @@ class Application(tk.Frame):
 
     def producto(self, A, B):
         print("Ejecutando Producto")
+        C = np.zeros(A.shape)
+        A_normalized = A / 255.0
+        B_normalized = B / 255.0
+        C = A_normalized * B_normalized
+        C = np.clip(C * 255, 0, 255).astype(np.uint8)
+        plt.imshow(C)
+        plt.title('Producto')
+        plt.show()
 
     def cociente(self, A, B):
         print("Ejecutando Cociente")
-
+        C = np.zeros(A.shape)
+        A_normalized = A / 255.0
+        B_normalized = B / 255.0
+        C = A_normalized / B_normalized
+        C = np.clip(C * 255, 0, 255).astype(np.uint8)
+        plt.imshow(C)
+        plt.title('Cociente')
+        plt.show()
     def resta_valor_absoluto(self, A, B):
         print("Ejecutando Resta en Valor Absoluto")
 
@@ -372,9 +387,9 @@ class Application(tk.Frame):
                 case "Resta promediada":
                     self.resta_promediada(imA, imB)
                 case "Producto":
-                    self.producto()
+                    self.producto(imA,imB)
                 case "Cociente":
-                    self.cociente()
+                    self.cociente(imA,imB)
                 case "Resta en valor absoluto":
                     self.resta_valor_absoluto()
                 case "If darker":
