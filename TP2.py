@@ -217,11 +217,11 @@ class Application(tk.Frame):
 
         # Procesar la primera imagen (imA)
         YIQ_A= self.imageRGBtoYIQ(imA)
-        imA = self.processImageRGBtoBYTE(YIQ_A)
+        imA = YIQ_A
 
         # Procesar la segunda imagen (imB)
         YIQ_B= self.imageRGBtoYIQ(imB)
-        imB = self.processImageRGBtoBYTE(YIQ_B)
+        imB = YIQ_B
         process='YIQ'
         self.message.config(text=f"Imagenes guardadas en {process}")
         
@@ -429,6 +429,13 @@ class Application(tk.Frame):
         print(f"Operación seleccionada: {selection}")
 
         if imA is not None and imB is not None:
+            if imA.dtype != np.uint8:
+                imA = np.uint8(imA * 255)
+                #(imA * 255).astype(np.uint8)  # Escalar a [0, 255] y convertir a uint8
+            if imB.dtype != np.uint8:
+                imB = np.uint8(imB * 255)
+                #imB = (imB * 255).astype(np.uint8)  # Escalar a [0, 255] y convertir a uint8
+                
             if imA.shape != imB.shape:
                 # Redimensionar imágenes para que tengan el mismo tamaño
                 new_size = (min(imA.shape[1], imB.shape[1]), min(imA.shape[0], imB.shape[0]))
