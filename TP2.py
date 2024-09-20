@@ -37,35 +37,16 @@ class Application(tk.Frame):
         self.squares_frame.pack(side="top", fill="both", expand=True)
 
         # Cuadro 1 de 500x500 píxeles
-        self.square1 = tk.Frame(self.squares_frame, width=500, height=500, bg="lightblue")
+        self.square1 = tk.Frame(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square1.pack(side="left", padx=10, pady=10)
 
         # Cuadro 2 de 500x500 píxeles 
-        self.square2 = tk.Canvas(self.squares_frame, width=500, height=500, bg="lightblue")
+        self.square2 = tk.Canvas(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square2.pack(side="left", padx=10, pady=10)
 
         # Frame para los botones entre los cuadros
         self.buttons_frame = tk.Frame(self.squares_frame)
         self.buttons_frame.pack(side="left", padx=10, pady=10)
-        
-   
-        # Frame para los botones inferiores
-        self.bottom_frame = tk.Frame(self)
-        self.bottom_frame.pack(side="bottom", fill="x")
-
-        # Botones para subir imagenes
-        self.buttonA = tk.Button(self.bottom_frame, command=lambda: self.upload_image('A'), text='Subir Imagen A', height=2, width=28)
-        self.buttonA.pack(side="left", padx=10)
-
-        self.buttonB = tk.Button(self.bottom_frame, command=lambda: self.upload_image('B'), text='Subir Imagen B', height=2, width=28)
-        self.buttonB.pack(side="left", padx=10)
-
-        # Botón para salir
-        self.out = tk.Button(self.bottom_frame, text="Salir", command=self.close, height=2, width=20)
-        self.out.pack(side="right", padx=10)
-
-        self.message= tk.Label(self.bottom_frame, text=f"Imagenes subidas en {process}")
-        self.message.pack(side="top")
 
         # Botón 3
         self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
@@ -90,18 +71,48 @@ class Application(tk.Frame):
         # self.button6 = tk.Button(self.buttons_frame, command=self.imageYIQtoRGB, text="Botón YIQ a RGB", height=2, width=20)
         # self.button6.pack(pady=5)
 
-        # Botón 1
-        self.button1 = tk.Button(self.buttons_frame, text="Guardar", height=2, width=20, command=self.save_image)
-        self.button1.pack(pady=5)
+        # Crear un frame inferior
+        self.operation = tk.Frame(self)
+        self.operation.pack(side="bottom", fill="x", pady=15)
+        # Frame para los botones inferiores
+        self.bottom_frame = tk.Frame(self)
+        self.bottom_frame.pack(side="bottom", fill="x")
+        
+        # Botón para salir
+        self.out = tk.Button(self.bottom_frame, text="Salir", command=self.close, height=2, width=20)
+        self.out.pack(side="right", padx=10)
+
+        # Guardar
+        self.save = tk.Button(self.bottom_frame, text="Guardar", height=2, width=20, command=self.save_image)
+        self.save.pack(side="right", pady=5)
+
+        # Procesar
+        self.process = tk.Button(self.bottom_frame, command=self.process_arithmetic, text='Procesar', height=2, width=28)
+        self.process.pack(side="right", padx=10)
+
+        self.message= tk.Label(self.bottom_frame, text=f"Imagenes subidas en {process}")
+        self.message.pack(side="top")
+
+        # Botones para subir imagenes
+        self.buttonA = tk.Button(self.bottom_frame, command=lambda: self.upload_image('A'), text='Subir Imagen A', height=2, width=20)
+        self.buttonA.pack(side="left", padx=10)
+
+        self.buttonB = tk.Button(self.bottom_frame, command=lambda: self.upload_image('B'), text='Subir Imagen B', height=2, width=20)
+        self.buttonB.pack(side="left", padx=10)
+
+        
+
+        # Frame que contendrá los dos cuadros y los botones
+        #self.operation_frame = tk.Frame(self)
+        #self.operation_frame.pack(side="top", fill="both", expand=True)
 
         # Crea el Combobox para Operaciones
         options = ["Suma clampeada", "Resta clampeada", "Suma promediada", "Resta promediada", "Producto", "Cociente", "Resta en valor absoluto", "If darker", "If ligther"]
-        self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
+        self.operation_message= tk.Label(self.operation, text="Operacion")
+        self.operation_message.pack(side="left")
+        self.comboboxOperations = ttk.Combobox(self.operation, values=options, height=20, width=28)
         self.comboboxOperations.set("Suma clampeada")  
         self.comboboxOperations.pack(side="left", padx=10)
-
-        self.buttonC = tk.Button(self.bottom_frame, command=self.process_arithmetic, text='Procesar', height=2, width=28)
-        self.buttonC.pack(side="left", padx=10)
         
 
     def upload_image(self, type):
@@ -125,7 +136,7 @@ class Application(tk.Frame):
 
         imgIO = imageio.imread(url_image)
         img=Image.fromarray(imgIO)
-        new_img = img.resize((500, 500))  # Cambiado para que la imagen se ajuste al tamaño del cuadro
+        new_img = img.resize((500, 400))  # Cambiado para que la imagen se ajuste al tamaño del cuadro
         imagen_tk = ImageTk.PhotoImage(new_img)
 
         if (type == 'A'):
