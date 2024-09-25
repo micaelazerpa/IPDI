@@ -27,6 +27,7 @@ class Application(tk.Frame):
         super().__init__(master)
         self.pack()
         self.create_widgets()
+        self.loaded_image = None
 
     def create_widgets(self):
         global process
@@ -37,37 +38,10 @@ class Application(tk.Frame):
         # Cuadro 1 de 500x500 píxeles
         self.square1 = tk.Frame(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square1.pack(side="left", padx=10, pady=10)
-
+        
         # Cuadro 2 de 500x500 píxeles 
         self.square2 = tk.Canvas(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square2.pack(side="left", padx=10, pady=10)
-
-        # Frame para los botones entre los cuadros
-        self.buttons_frame = tk.Frame(self.squares_frame)
-        self.buttons_frame.pack(side="left", padx=10, pady=10)
-
-        # Botón 3
-        self.button3 = tk.Button(self.buttons_frame, command=self.processImageRGB, text="Botón RGB", height=2, width=20)
-        self.button3.pack(pady=5)
-
-        # Inputs para los valores numéricos
-        self.label_luminancia = tk.Label(self.buttons_frame, text="Luminancia")
-        self.label_luminancia.pack(pady=5)
-        self.input_luminancia = tk.Entry(self.buttons_frame)
-        self.input_luminancia.pack(pady=5)
-
-        self.label_saturacion = tk.Label(self.buttons_frame, text="Saturación")
-        self.label_saturacion.pack(pady=5)
-        self.input_saturacion = tk.Entry(self.buttons_frame)
-        self.input_saturacion.pack(pady=5)
-
-        # Botón 4
-        self.button4 = tk.Button(self.buttons_frame, command=self.processImageYIQ, text="Botón RGB a YIQ", height=2, width=20)
-        self.button4.pack(pady=5)
-
-        # Botón 4
-        # self.button6 = tk.Button(self.buttons_frame, command=self.imageYIQtoRGB, text="Botón YIQ a RGB", height=2, width=20)
-        # self.button6.pack(pady=5)
 
         # Crear un frame inferior
         self.operation = tk.Frame(self)
@@ -109,6 +83,17 @@ class Application(tk.Frame):
         self.comboboxOperations = ttk.Combobox(self.operation, values=options, height=20, width=28)
         self.comboboxOperations.set("Raiz")  
         self.comboboxOperations.pack(side="left", padx=10)
+
+         # Inputs para los valores numéricos
+        self.label_luminancia = tk.Label(self.operation, text="Luminancia de corte inferior")
+        self.label_luminancia.pack(side="left")
+        self.input_luminancia = tk.Entry(self.operation)
+        self.input_luminancia.pack(side="left", padx=10)
+
+        self.label_saturacion = tk.Label(self.operation, text="Luminancia de corte superior")
+        self.label_saturacion.pack(side="left")
+        self.input_saturacion = tk.Entry(self.operation)
+        self.input_saturacion.pack(side="left", padx=10)
         
 
     def upload_image(self):
@@ -137,7 +122,6 @@ class Application(tk.Frame):
 
         img1.image = imagen_tk
         img1.pack()
-        self.loaded_image = img 
 
     def close(self):
         response = messagebox.askquestion("Salir", "¿Desea salir de la interfaz?")
@@ -145,11 +129,12 @@ class Application(tk.Frame):
             self.master.destroy()
 
     def save_image(self):
-        if self.loaded_image:
+        if self.loaded_image: 
             save_path = os.path.join(os.getcwd(), 'imagen_guardada.png')  # Guarda en la carpeta de ejecución
-            self.loaded_image.save(save_path)
+            self.loaded_image.save(save_path)  
             messagebox.showinfo("Imagen guardada", f"Imagen guardada en {save_path}")
-            self.url_image = save_path  # Actualiza la ruta de la imagen guardada
+        else:
+            messagebox.showwarning("Sin imagen", "No hay imagen para guardar.")
 
     def processImageRGB(self):
         global imgIO
@@ -171,6 +156,7 @@ class Application(tk.Frame):
         plt.show()
 
     def imageRGBtoYIQ(self, image):
+        global process
         #   1.Normalizar los valores de RGB del pixel
         im = np.clip(image/255,0.,1.)
         
@@ -180,26 +166,22 @@ class Application(tk.Frame):
         YIQ[:, :, 0] = np.clip((im[:, :, 0] * 0.299 + im[:, :, 1] * 0.587 + im[:, :, 2] * 0.114), 0., 1.)
         YIQ[:, :, 1] = np.clip(im[:, :, 0] * 0.595 + im[:, :, 1] * (-0.274) + im[:, :, 2] * (-0.321), -0.59, 0.59)
         YIQ[:, :, 2] = np.clip(im[:, :, 0] * 0.211 + im[:, :, 1] * (-0.522) + im[:, :, 2] * (0.311), -0.52, 0.52) 
-
-        a = float(self.input_luminancia.get()) if self.input_luminancia.get().strip() else 1
-        b = float(self.input_saturacion.get()) if self.input_saturacion.get().strip() else 1
-
-        #   3-5. Y’ := aY ;  con Y’ <= 1 (para que no se vaya de rango)
-        #   4-6. I’ := bI ; con -0.5957 < I’ < 0.5957   Q’ := bQ ; con -0.5226 < Q’ < 0.5226
-
-        YIQ[:,:,0] = np.clip(a * YIQ[:, :, 0], 0, 1)
-        YIQ[:,:,1] = np.clip(b * YIQ[:,:,1], -0.5957, 0.5957)
-        YIQ[:,:,2] = np.clip(b * YIQ[:,:,2], -0.5226, 0.5226)
-
+        
+        process = 'YIQ'
+        self.message.config(text=f"Imágen guardada en {process}")
+        
         return YIQ
     
-    def imageYIQtoRGB(self, YIQ):        
+    def imageYIQtoRGB(self,YIQop, YIQ):        
         #   7. Y’I’Q’ -> R’G’B’ (el RGB normalizado del pixel procesado)
         print('Entro a convertir en RGB')
+        if YIQop is None:
+            YIQop = YIQ[:,:,0]
+        
         RGB=np.zeros(YIQ.shape)
-        RGB[:,:,0] = np.clip(YIQ[:,:,0] + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
-        RGB[:,:,1] = np.clip(YIQ[:,:,0] - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
-        RGB[:,:,2] = np.clip(YIQ[:,:,0] - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,0] = np.clip(YIQop + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,1] = np.clip(YIQop - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,2] = np.clip(YIQop - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
 
         return RGB
 
@@ -211,31 +193,6 @@ class Application(tk.Frame):
         #   8.Convertir R’G’B’ a bytes y graficar el pixel
         RGB_BYTE = np.uint8(image * 255)
         return RGB_BYTE
-
-    def processImageYIQ(self):
-        global im, process
-
-        # Procesar la imagen (im)
-        YIQ= self.imageRGBtoYIQ(im)
-        im = YIQ
-
-        process='YIQ'
-        self.message.config(text=f"Imágen guardada en {process}")
-        
-        titles = ['Canal YIQ', 'Canal Y', 'Canal I', 'Canal Q']
-
-        # Visualización de la imagen 
-        RGB_A= self.imageYIQtoRGB(YIQ)
-        for i in range(4):
-            plt.subplot(1, 4, i + 1)
-            if i == 0:
-                plt.imshow(RGB_A)
-            else:
-                plt.imshow(RGB_A[:, :, i - 1])
-            plt.title(titles[i])
-            plt.axis('off')
-        plt.show()
-    
 
     def histogram(self):
         global im
@@ -251,16 +208,46 @@ class Application(tk.Frame):
         plt.show()
 
     def raiz(self, im):
+        global imRGB
         print(f"Raiz")
+        YIQ = np.zeros(im.shape)
+        YIQ = self.imageRGBtoYIQ(im)
+    
+        Yraiz = np.sqrt(YIQ[:,:,0])
+        RGBraiz= self.imageYIQtoRGB(Yraiz,YIQ)
+        imRGB = RGBraiz
 
     def lineal_trozos(self, im):
+        global imRGB
         print(f"Lineal")
+        YIQ = np.zeros(im.shape)
+        YIQ = self.imageRGBtoYIQ(im)
+
+        Ymin = float(self.input_luminancia.get()) if self.input_luminancia.get().strip() else 0.2
+        Ymax = float(self.input_saturacion.get()) if self.input_saturacion.get().strip() else 0.8
+
+        YIQ[:,:,0] = np.where(YIQ[:,:,0] < Ymin, 0, np.where(YIQ[:,:,0] > Ymax, 1, (YIQ[:,:,0] - Ymin) / (Ymax - Ymin)))
+        YIQ[:,:,1] = YIQ[:,:,1]
+        YIQ[:,:,2] = YIQ[:,:,2]
+
+        RGBlineal= self.imageYIQtoRGB(None, YIQ)
+        imRGB = RGBlineal
+
 
     def cuadrado(self, im):
+        global imRGB
         print(f"Cuadrado")
+
+        YIQ = np.zeros(im.shape)
+        YIQ = self.imageRGBtoYIQ(im)
+    
+        Ycuadrado= np.clip(YIQ[:,:,0] * YIQ[:,:,0], 0, 1)
+        RGBcuadrado= self.imageYIQtoRGB(Ycuadrado,YIQ)
+        imRGB = RGBcuadrado
+
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
-        global im
+        global im, imRGB
         selection= self.comboboxOperations.get()
         print(f"Operación seleccionada: {selection}")
         if im is not None:
@@ -274,6 +261,18 @@ class Application(tk.Frame):
                 case _:
                     print("Opción inválida")
 
+            # Convertir el array NumPy resultante a una imagen Pillow
+            img = Image.fromarray(np.uint8(imRGB * 255))  
+            new_img = img.resize((500, 400))  
+            
+            # Convertir la imagen a formato Tkinter
+            imagen_tk = ImageTk.PhotoImage(new_img)
+            
+            # Mostrar la imagen en el square2
+            img1 = Label(self.square2, image=imagen_tk)
+            img1.image = imagen_tk  # Mantener una referencia de la imagen
+            img1.pack()         
+            self.loaded_image = img
 
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
