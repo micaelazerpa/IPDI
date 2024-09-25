@@ -15,7 +15,6 @@ imgIO = None
 imRGB = None
 process =None
 image = None
-
 im= None
 
 class Application(tk.Frame):
@@ -104,11 +103,11 @@ class Application(tk.Frame):
         #self.operation_frame.pack(side="top", fill="both", expand=True)
 
         # Crea el Combobox para Operaciones
-        options = ["Suma clampeada", "Resta clampeada", "Suma promediada", "Resta promediada", "Producto", "Cociente", "Resta en valor absoluto", "If darker", "If ligther"]
+        options = ["Raiz", "Lineal a Trozos", "Cuadrado"]
         self.operation_message= tk.Label(self.operation, text="Operacion")
         self.operation_message.pack(side="left")
         self.comboboxOperations = ttk.Combobox(self.operation, values=options, height=20, width=28)
-        self.comboboxOperations.set("Suma clampeada")  
+        self.comboboxOperations.set("Raiz")  
         self.comboboxOperations.pack(side="left", padx=10)
         
 
@@ -217,7 +216,7 @@ class Application(tk.Frame):
         global im, process
 
         # Procesar la imagen (im)
-        YIQ= self.imageRGBtoYIQ(imA)
+        YIQ= self.imageRGBtoYIQ(im)
         im = YIQ
 
         process='YIQ'
@@ -236,225 +235,42 @@ class Application(tk.Frame):
             plt.title(titles[i])
             plt.axis('off')
         plt.show()
-
-
-    def resize_image(self, img, target_shape):
-        img_resized = img.resize(target_shape, Image.Resampling.LANCZOS)
-        return np.array(img_resized)
     
-    def ensure_rgb(self, image):
-        #Para que la imagen tenga 3 canales
-        if image.shape[2] > 3:
-            # Si hay más de 3 canales, solo toma los primeros 3
-            image = image[:, :, :3]
-        elif image.shape[2] < 3:
-            # Si hay menos de 3 canales, convierte la imagen a RGB
-            image = np.dstack([image] * 3)
-        return image
-    
-    # Funciones para cada operación
-    def suma_clampeada(self, A, B):
-        global process
-        print("Ejecutando Suma Clampeada")
-        
-        C = np.zeros(A.shape)
-
-        if (process == 'RGB'):
-            print("Ejecutando Suma de RGB")
-            A = (A/255.0)
-            B = (B/255.0)
-            C = np.clip(A + B)
-
-        if (process == 'YIQ'):
-            print("Ejecutando Suma de YIQ")
-            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0]),0.,1.)
-            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C= self.imageYIQtoRGB(C)
-
-        plt.imshow(C)
-        plt.title('Suma Clampeada')
-        plt.show()
-
-    def resta_clampeada(self, A, B):
-        global process
-
-        print("Ejecutando Resta Clampeada")
-        A = (A/255.0)
-        B = (B/255.0)
-        C = np.zeros(A.shape)
-
-        if (process == 'RGB'):
-            print("Ejecutando Resta de RGB")
-            C = np.clip(A - B, 0, 255)
-        
-        if (process == 'YIQ'):
-            print("Ejecutando Resta de YIQ")
-            C [:,:,0]= np.clip(A[:, :, 0] - B[:, :, 0], 0., 1.)
-            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C= self.imageYIQtoRGB(C)
-    
-        plt.imshow(C)
-        plt.title('Resta Clampeada')
-        plt.show()
-
-    def suma_promediada(self, A, B):
-        global process
-
-        print("Ejecutando Suma Promediada")
-        A = (A/255.0)
-        B = (B/255.0)
-        C = np.zeros(A.shape)
-
-        if (process == 'RGB'):
-            print("Ejecutando Suma de RGB")
-            C = np.clip((A + B)/2)
-        
-        if (process == 'YIQ'):
-            print("Ejecutando Suma de YIQ")
-            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2)
-            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) + (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) + (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0]+ 1e-5)
-            C= self.imageYIQtoRGB(C)
-        
-        plt.imshow(C)
-        plt.title('Suma Promediada')
-        plt.show()
-
-
-    def resta_promediada(self, A, B):
-        global process
-
-        print("Ejecutando Resta Promediada")
-        if (process == 'RGB'):
-            print("Ejecutando Resta de RGB")
-            A = (A/255.0)
-            B = (B/255.0)
-            C = np.clip((A - B)/2)
-        
-        if (process == 'YIQ'):
-            print("Ejecutando Resta de YIQ")
-            C [:,:,0]= np.clip((A[:, :, 0] + B[:, :, 0])/2)
-            C [:,:,1] = ((A[:,:,0] * A[:,:,1]) - (B[:,:,0] * B[:,:,1])) / (A[:,:,0] + B[:,:,0])
-            C [:,:,2] = ((A[:,:,0] * A[:,:,2]) - (B[:,:,0] * B[:,:,2])) / (A[:,:,0] + B[:,:,0])
-            C= self.imageYIQtoRGB(C)
-
-        plt.imshow(C)
-        plt.title('Resta Promediada')
-        plt.show()
-
-
-    def producto(self, A, B):
-        print("Ejecutando Producto")
-        C = np.zeros(A.shape)
-        A_normalized = A / 255.0
-        B_normalized = B / 255.0
-        C = A_normalized * B_normalized
-        C = np.clip(C * 255, 0, 255).astype(np.uint8)
-        plt.imshow(C)
-        plt.title('Producto')
-        plt.show()
-
-    def cociente(self, A, B):
-        print("Ejecutando Cociente")
-        C = np.zeros(A.shape)
-        A_normalized = A / 255.0
-        B_normalized = B / 255.0
-        C = A_normalized / B_normalized
-        C = np.clip(C * 255, 0, 255).astype(np.uint8)
-        plt.imshow(C)
-        plt.title('Cociente')
-        plt.show()
-    def resta_valor_absoluto(self, A, B):
-        print("Ejecutando Resta en Valor Absoluto")
-        C = np.abs(A.astype(np.int16) - B.astype(np.int16))
-        C = np.clip(C, 0, 255).astype(np.uint8)
-        plt.imshow(C)
-        plt.title('Resta valor absoluto')
-        plt.show()
-
-    def if_darker(self, A, B):
-        print("Ejecutando If Darker")
-        YIQ_A = self.imageRGBtoYIQ(A)
-        #YIQ_A = self.processImageRGBtoBYTE(YIQ_A)
-        YIQ_B = self.imageRGBtoYIQ(B)
-        #YIQ_B = self.processImageRGBtoBYTE(YIQ_B)
-        
-        YIQ_C = np.zeros(imA.shape)
-        YIQ_C[:, :, 0] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 0], YIQ_B[:, :, 0])
-        YIQ_C[:, :, 1] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 1], YIQ_B[:, :, 1])
-        YIQ_C[:, :, 2] = np.where(YIQ_A[:, :, 0] < YIQ_B[:, :, 0], YIQ_A[:, :, 2], YIQ_B[:, :, 2])
-
-        C= self.imageYIQtoRGB(YIQ_C)
-
-        plt.imshow(C)
-        plt.title('If Darker')
-        plt.show()
-
-    def if_lighter(self, A, B):
-        print("Ejecutando If Lighter")
-        YIQ_A = self.imageRGBtoYIQ(A)
-        YIQ_B = self.imageRGBtoYIQ(B)
-        
-        YIQ_C = np.zeros(imA.shape)
-        YIQ_C[:, :, 0] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 0], YIQ_B[:, :, 0])
-        YIQ_C[:, :, 1] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 1], YIQ_B[:, :, 1])
-        YIQ_C[:, :, 2] = np.where(YIQ_A[:, :, 0] > YIQ_B[:, :, 0], YIQ_A[:, :, 2], YIQ_B[:, :, 2])
-
-        C= self.imageYIQtoRGB(YIQ_C)
-
-        plt.imshow(C)
-        plt.title('If Lighter')
-        plt.show()
 
     def histogram(self):
+        global im
         print(f"Histograma")
+        YIQ = self.imageRGBtoYIQ(im)
+        histograma, bins = np.histogram(YIQ[:,:,0].flatten(), bins=10, range=(0, 1))
+
+        plt.subplots(figsize=(4, 2))
+        plt.bar(bins[:-1], (histograma / histograma.sum()) * 100, width=(bins[1] - bins[0]), edgecolor='black')
+        plt.title('Histograma')
+        plt.xlabel('Luminancia')
+        plt.ylabel('Frecuencia %')
+        plt.show()
+
+    def raiz(self, im):
+        print(f"Raiz")
+
+    def lineal_trozos(self, im):
+        print(f"Lineal")
+
+    def cuadrado(self, im):
+        print(f"Cuadrado")
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
-        global imA, imB
+        global im
         selection= self.comboboxOperations.get()
         print(f"Operación seleccionada: {selection}")
-
-        if imA is not None and imB is not None:
-            if imA.dtype != np.uint8:
-                imA = np.uint8(imA * 255)
-                #(imA * 255).astype(np.uint8)  # Escalar a [0, 255] y convertir a uint8
-            if imB.dtype != np.uint8:
-                imB = np.uint8(imB * 255)
-                #imB = (imB * 255).astype(np.uint8)  # Escalar a [0, 255] y convertir a uint8
-                
-            if imA.shape != imB.shape:
-                # Redimensionar imágenes para que tengan el mismo tamaño
-                new_size = (min(imA.shape[1], imB.shape[1]), min(imA.shape[0], imB.shape[0]))
-                imA = self.resize_image(Image.fromarray(imA), new_size)
-                imB = self.resize_image(Image.fromarray(imB), new_size)
-
-            imA = self.ensure_rgb(imA)
-            imB = self.ensure_rgb(imB)
-                
-            print(f"Redimensiones imagen A-----: {imA.shape}")
-            print(f"Redimensiones imagen B-----: {imB.shape}")
-
+        if im is not None:
             match selection:
-                case "Suma clampeada":
-                    self.suma_clampeada(imA, imB)
-                case "Resta clampeada":
-                    self.resta_clampeada(imA, imB)
-                case "Suma promediada":
-                    self.suma_promediada(imA, imB)
-                case "Resta promediada":
-                    self.resta_promediada(imA, imB)
-                case "Producto":
-                    self.producto(imA, imB)
-                case "Cociente":
-                    self.cociente(imA, imB)
-                case "Resta en valor absoluto":
-                    self.resta_valor_absoluto(imA, imB)
-                case "If darker":
-                    self.if_darker(imA, imB)
-                case "If ligther":
-                    self.if_lighter(imA, imB)
+                case "Raiz":
+                    self.raiz(im)
+                case "Lineal a Trozos":
+                    self.lineal_trozos(im)
+                case "Cuadrado":
+                    self.cuadrado(im)
                 case _:
                     print("Opción inválida")
 
