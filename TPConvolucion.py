@@ -176,16 +176,27 @@ class Application(tk.Frame):
         return RGB_BYTE
     
     def K_lineal(self, dim):
+        print(f"Lineal")
         K= np.zeros((dim, dim))
         for i in range(dim):
             for j in range(dim):
                 K[i,j]=1/(dim*dim)
         return K
 
+    def bartlett(self, dim):
+        global imRGB
+        print(f"Bartlett")
+        
+        newArray = (dim+1)//2-np.abs(np.arange(dim)-dim//2)
+        K = np.outer(newArray,newArray.T)
+        K = K/K.sum()
+        return K
+
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
-        print(f"Pasabajos llano", kernel)
-        image = self.imageRGBtoYIQ(image)
+        print(f"Kernel", kernel)
+        YIQ = self.imageRGBtoYIQ(image)
+        image=YIQ[:,:,0]
 
         conv = np.zeros((np.array(image.shape) - np.array(kernel.shape) + 1))
 
@@ -194,8 +205,8 @@ class Application(tk.Frame):
                 conv[i,j]= (image[i:i+kernel.shape[0], j:j+kernel.shape[1]]*kernel).sum()
         print(f"Redimensiones imagen-----: {conv.shape}")
 
-        RGB= self.imageYIQtoRGB(conv)
-        imRGB = RGB
+        #RGB= self.imageYIQtoRGB(conv)
+        imRGB = conv
 
 
     # Función para procesar la operación según la selección
@@ -206,7 +217,6 @@ class Application(tk.Frame):
         if im is not None:
             #kernel = np.ones((3,3))
             #kernel /=np.sum(kernel)
-            #kernel = np.clip(kernel/255,0.,1.)
 
             match selection:
                 case "Pasabajos llano 3x3":
@@ -214,16 +224,19 @@ class Application(tk.Frame):
                     self.convolucion(im, kernel)
                 case "Pasabajos llano 5x5":
                     kernel = self.K_lineal(5)
-                    self.lineal_trozos(im, kernel)
+                    self.convolucion(im, kernel)
                 case "Pasabajos llano 7x7":
                     kernel = self.K_lineal(7)
-                    self.cuadrado(im, kernel)
+                    self.convolucion(im, kernel)
                 case "Bartlett 3x3":
-                    self.raiz(im)
+                    kernel = self.bartlett(3)
+                    self.convolucion(im, kernel)
                 case "Bartlett 5x5":
-                    self.lineal_trozos(im)
+                    kernel = self.bartlett(5)
+                    self.convolucion(im, kernel)
                 case "Bartlett 7x7":
-                    self.cuadrado(im)
+                    kernel = self.bartlett(7)
+                    self.convolucion(im, kernel)
                 case _:
                     print("Opción inválida")
 
