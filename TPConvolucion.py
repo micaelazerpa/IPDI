@@ -71,7 +71,7 @@ class Application(tk.Frame):
 
 
         # Crea el Combobox para Operaciones
-        options = ["Pasabajos llano 3x3", "Pasabajos llano 5x5", "Pasabajos llano 7x7", "Bartlett 3x3", "Bartlett 5x5", "Bartlett 7x7"]
+        options = ["Pasabajos llano 3x3", "Pasabajos llano 5x5", "Pasabajos llano 7x7", "Bartlett 3x3", "Bartlett 5x5", "Bartlett 7x7", "Gaussiano 5x5", "Gaussiano 7x7", "Pasaaltos Laplaciano v4", "Pasaaltos Laplaciano v8", "Pasabanda Dog 5x5"]
         self.operation_message= tk.Label(self.bottom_frame, text="Filtros")
         self.operation_message.pack(side="left")
         self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
@@ -192,6 +192,76 @@ class Application(tk.Frame):
         K = K/K.sum()
         return K
 
+    def gaussiano(self, dim):
+        def pascal_triangle(steps, last_layer = np.array([1])):
+            if steps==1:
+                return last_layer
+        
+            next_layer = np.array([1,*(last_layer[:-1]+last_layer[1:]),1])
+            
+            return pascal_triangle(steps-1,next_layer)
+        
+        a = pascal_triangle(dim)
+        k = np.outer(a, a.T)
+        return k / k.sum()
+    
+    # Función para crear un kernel gaussiano
+    def gauss(self,size, sigma):
+        ax = np.linspace(-(size // 2), size // 2, size)
+        xx, yy = np.meshgrid(ax, ax)
+        g = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
+        return g / g.sum()
+
+    # Función para crear el kernel DoG
+    def dog(self, size, fs=0.2, cs=0.4):
+        return self.gauss(size, fs) - self.gauss(size, cs)
+# from scipy import signal
+# # use scipy version from now on
+# convolve = signal.convolve
+# plt.imshow(convolve(im,bartlett(3), 'valid'),'gray')
+# plt.title('Bartlett')
+# plt.show()
+
+    def gaussian_blur_filter(image, size):
+        pascal_row = []
+        kernel = np.zeros((size, size))
+        n = size - 1
+
+        for k in range(size):
+            coefficient = math.comb(n, k)
+            pascal_row.append(coefficient)
+            kernel[0, :] = pascal_row
+            kernel[size - 1, :] = pascal_row
+            kernel[:, 0] = pascal_row
+            kernel[:, size - 1] = pascal_row
+
+        for i in range(1, size - 1):
+            for j in range(1, size - 1):
+                kernel[i, j] = kernel[0, j] * kernel[i, 0]
+            print(kernel)
+        kernel = kernel / (16 ** (size // 2))
+
+        return convolve(image, kernel)
+
+    def laplace(self, _type, normalize=False):
+        if _type==4:
+            kernel =  np.array([[0.,-1.,0.],[-1.,4.,-1.],[0.,-1.,0.]])
+        if _type==8:
+            kernel =  np.array([[-1.,-1.,-1.],[-1.,8.,-1.],[-1.,-1.,-1.]])
+        if normalize:
+            kernel /= np.sum(np.abs(kernel))
+        return kernel
+    
+    # def dog(self, size,fs=1,cs=2):
+    #     return self.gaussiano(size,fs)-self.gaussiano(size,cs)
+
+    def high_pass(low_pass):
+        def identity_kernel(s):
+            kernel = np.zeros(s)
+            kernel[s[0]//2,s[1]//2] = 1.
+            return kernel
+        return identity_kernel(low_pass.shape) - low_pass
+    
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
         print(f"Kernel", kernel)
@@ -236,6 +306,21 @@ class Application(tk.Frame):
                     self.convolucion(im, kernel)
                 case "Bartlett 7x7":
                     kernel = self.bartlett(7)
+                    self.convolucion(im, kernel)
+                case "Gaussiano 5x5":
+                    kernel = self.gaussiano(5)
+                    self.convolucion(im, kernel)
+                case "Gaussiano 7x7":
+                    kernel = self.gaussiano(7)
+                    self.convolucion(im, kernel)
+                case "Pasaaltos Laplaciano v4":
+                    kernel = self.laplace(4)
+                    self.convolucion(im, kernel)
+                case "Pasaaltos Laplaciano v8":
+                    kernel = self.laplace(8)
+                    self.convolucion(im, kernel)
+                case "Pasabanda Dog 5x5":
+                    kernel = self.dog(5)
                     self.convolucion(im, kernel)
                 case _:
                     print("Opción inválida")
