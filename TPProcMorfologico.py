@@ -8,18 +8,20 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import imageio.v2 as imageio
 from PIL import Image, ImageTk
+from scipy import signal 
+#use scipy version from now on
 
 import os
 
 imgIO = None
 imRGB = None
 process =None
-image = None
+image_show = None
+image_show1 = None
 im= None
 
 class Application(tk.Frame):
     global url_image
-    url_image =""
 
     global imRGB
 
@@ -39,6 +41,10 @@ class Application(tk.Frame):
         self.square1 = tk.Frame(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square1.pack(side="left", padx=10, pady=10)
         
+        # Frame para los botones entre los cuadros
+        self.button_centro = tk.Frame(self.squares_frame)
+        self.button_centro.pack(side="left", padx=10, pady=10)
+        
         # Cuadro 2 de 500x500 píxeles 
         self.square2 = tk.Canvas(self.squares_frame, width=500, height=400, bg="lightblue")
         self.square2.pack(side="left", padx=10, pady=10)
@@ -57,9 +63,13 @@ class Application(tk.Frame):
         # Guardar
         self.save = tk.Button(self.bottom_frame, text="Guardar", height=2, width=20, command=self.save_image)
         self.save.pack(side="right", pady=5)
+        
+        # Copiar
+        self.button3 = tk.Button(self.button_centro, command=self.copy_image,  text="<- Copiar", height=2, width=20)
+        self.button3.pack(pady=20)
 
         # Procesar
-        self.process = tk.Button(self.bottom_frame, command=self.process_arithmetic, text='Procesar', height=2, width=28)
+        self.process = tk.Button(self.button_centro, command=self.process_arithmetic, text='Procesar', height=2, width=20)
         self.process.pack(side="right", padx=10)
 
         self.message= tk.Label(self.bottom_frame, text=f"Imágen subida en {process}")
@@ -69,16 +79,22 @@ class Application(tk.Frame):
         self.buttonA = tk.Button(self.bottom_frame, command=lambda: self.upload_image(), text='Subir Imagen', height=2, width=20)
         self.buttonA.pack(side="left", padx=10)
 
+        self.bottom_histogram = tk.Button(self.bottom_frame, command=self.histogram, text='Histograma', height=2, width=15)
+        self.bottom_histogram.pack(side="left", padx=10)        
+
+        self.label_umbral = tk.Label(self.bottom_frame, text="Umbral")
+        self.label_umbral.pack(side="left")
+        self.input_umbral = tk.Entry(self.bottom_frame)
+        self.input_umbral.pack(side="left", padx=10)
 
         # Crea el Combobox para Operaciones
-        options = ["Pasabajos llano 3x3", "Pasabajos llano 5x5", "Pasabajos llano 7x7", "Bartlett 3x3", "Bartlett 5x5", "Bartlett 7x7", "Gaussiano 5x5", "Gaussiano 7x7", "Pasaaltos Laplaciano v4", "Pasaaltos Laplaciano v8", "Pasabanda Dog 5x5"]
-        self.operation_message= tk.Label(self.bottom_frame, text="Filtros")
+        options = ["Binarizar","Erosión 3x3", "Erosión 5x5", "Dilatación 3x3", "Dilatación 5x5", "Mediana 3x3", "Mediana 5x5", "Apertura 3x3", "Apertura 5x5", "Cierre 3x3", "Cierre 5x5"]
+        self.operation_message= tk.Label(self.bottom_frame, text="Filtro")
         self.operation_message.pack(side="left")
         self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
-        self.comboboxOperations.set("Pasabajos llano 3x3")  
+        self.comboboxOperations.set("Erosión 3x3")  
         self.comboboxOperations.pack(side="left", padx=10)
         
-
     def upload_image(self):
         global url_image, process, image
 
@@ -89,22 +105,22 @@ class Application(tk.Frame):
             process = 'RGB'
             self.message.config(text=f"Imágen guardada en {process}")
             self.show_image(url_image)
-        image = url_image
 
     def show_image(self, url_image):
-        global im, imgIO
+        global im, image_show
         print(f"Show de imagen seleccionada: {url_image}")
+         # Limpiar la imagen anterior si existe
+        if image_show is not None:
+            image_show.destroy()
 
-        imgIO = imageio.imread(url_image)
-        img=Image.fromarray(imgIO)
+        im = imageio.imread(url_image)
+        img=Image.fromarray(im)
         new_img = img.resize((500, 400))  # Cambiado para que la imagen se ajuste al tamaño del cuadro
         imagen_tk = ImageTk.PhotoImage(new_img)
         
-        img1 = Label(self.square1, image=imagen_tk)
-        im=imgIO
-
-        img1.image = imagen_tk
-        img1.pack()
+        image_show = Label(self.square1, image=imagen_tk)
+        image_show.image = imagen_tk
+        image_show.pack()
 
     def close(self):
         response = messagebox.askquestion("Salir", "¿Desea salir de la interfaz?")
@@ -118,6 +134,24 @@ class Application(tk.Frame):
             messagebox.showinfo("Imagen guardada", f"Imagen guardada en {save_path}")
         else:
             messagebox.showwarning("Sin imagen", "No hay imagen para guardar.")
+
+    def copy_image(self):
+        global im, image_show
+        if image_show is not None:
+            image_show.destroy()
+ 
+        if im is not None:
+            img = Image.fromarray(np.uint8(im * 255))  
+            # Redimensionar la imagen para el cuadro
+            new_img = img.resize((500, 400))
+            imagen_tk = ImageTk.PhotoImage(new_img)
+            
+            # Mostrar la imagen en square1
+            image_show = Label(self.square1, image=imagen_tk)
+            image_show.image = imagen_tk  # Mantener la referencia
+            image_show.pack()
+        else:
+            print("No hay imagen para copiar")
 
     def processImageRGB(self):
         global imgIO
@@ -155,14 +189,16 @@ class Application(tk.Frame):
         
         return YIQ
     
-    def imageYIQtoRGB(self, YIQ):        
+    def imageYIQtoRGB(self,YIQop, YIQ):        
         #   7. Y’I’Q’ -> R’G’B’ (el RGB normalizado del pixel procesado)
         print('Entro a convertir en RGB')
+        if YIQop is None:
+            YIQop = YIQ[:,:,0]
         
         RGB=np.zeros(YIQ.shape)
-        RGB[:,:,0] = np.clip(YIQ[:,:,0] + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
-        RGB[:,:,1] = np.clip(YIQ[:,:,0] - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
-        RGB[:,:,2] = np.clip(YIQ[:,:,0] - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,0] = np.clip(YIQop + 0.9563 * YIQ[:,:,1] + 0.6210 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,1] = np.clip(YIQop - 0.2721 * YIQ[:,:,1] - 0.6474 * YIQ[:,:,2], 0, 1)
+        RGB[:,:,2] = np.clip(YIQop - 1.1070 * YIQ[:,:,1] + 1.7046 * YIQ[:,:,2], 0, 1)
 
         return RGB
 
@@ -174,24 +210,20 @@ class Application(tk.Frame):
         #   8.Convertir R’G’B’ a bytes y graficar el pixel
         RGB_BYTE = np.uint8(image * 255)
         return RGB_BYTE
+
+    def histogram(self):
+        global im
+        print(f"Histograma")
+        YIQ = self.imageRGBtoYIQ(im)
+        histograma, bins = np.histogram(YIQ[:,:,0].flatten(), bins=10, range=(0, 1))
+
+        plt.subplots(figsize=(4, 2))
+        plt.bar(bins[:-1], (histograma / histograma.sum()) * 100, width=(bins[1] - bins[0]), edgecolor='black')
+        plt.title('Histograma')
+        plt.xlabel('Luminancia')
+        plt.ylabel('Frecuencia %')
+        plt.show()
     
-    def K_lineal(self, dim):
-        print(f"Lineal")
-        K= np.zeros((dim, dim))
-        for i in range(dim):
-            for j in range(dim):
-                K[i,j]=1/(dim*dim)
-        return K
-
-    def bartlett(self, dim):
-        global imRGB
-        print(f"Bartlett")
-        
-        newArray = (dim+1)//2-np.abs(np.arange(dim)-dim//2)
-        K = np.outer(newArray,newArray.T)
-        K = K/K.sum()
-        return K
-
     def gaussiano(self, dim):
         def pascal_triangle(steps, last_layer = np.array([1])):
             if steps==1:
@@ -204,63 +236,6 @@ class Application(tk.Frame):
         a = pascal_triangle(dim)
         k = np.outer(a, a.T)
         return k / k.sum()
-    
-    # Función para crear un kernel gaussiano
-    def gauss(self,size, sigma):
-        ax = np.linspace(-(size // 2), size // 2, size)
-        xx, yy = np.meshgrid(ax, ax)
-        g = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
-        return g / g.sum()
-
-    # Función para crear el kernel DoG
-    def dog(self, size, fs=0.2, cs=0.4):
-        return self.gauss(size, fs) - self.gauss(size, cs)
-# from scipy import signal
-# # use scipy version from now on
-# convolve = signal.convolve
-# plt.imshow(convolve(im,bartlett(3), 'valid'),'gray')
-# plt.title('Bartlett')
-# plt.show()
-
-    def gaussian_blur_filter(image, size):
-        pascal_row = []
-        kernel = np.zeros((size, size))
-        n = size - 1
-
-        for k in range(size):
-            coefficient = math.comb(n, k)
-            pascal_row.append(coefficient)
-            kernel[0, :] = pascal_row
-            kernel[size - 1, :] = pascal_row
-            kernel[:, 0] = pascal_row
-            kernel[:, size - 1] = pascal_row
-
-        for i in range(1, size - 1):
-            for j in range(1, size - 1):
-                kernel[i, j] = kernel[0, j] * kernel[i, 0]
-            print(kernel)
-        kernel = kernel / (16 ** (size // 2))
-
-        return convolve(image, kernel)
-
-    def laplace(self, _type, normalize=False):
-        if _type==4:
-            kernel =  np.array([[0.,-1.,0.],[-1.,4.,-1.],[0.,-1.,0.]])
-        if _type==8:
-            kernel =  np.array([[-1.,-1.,-1.],[-1.,8.,-1.],[-1.,-1.,-1.]])
-        if normalize:
-            kernel /= np.sum(np.abs(kernel))
-        return kernel
-    
-    # def dog(self, size,fs=1,cs=2):
-    #     return self.gaussiano(size,fs)-self.gaussiano(size,cs)
-
-    def high_pass(low_pass):
-        def identity_kernel(s):
-            kernel = np.zeros(s)
-            kernel[s[0]//2,s[1]//2] = 1.
-            return kernel
-        return identity_kernel(low_pass.shape) - low_pass
     
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
@@ -276,67 +251,92 @@ class Application(tk.Frame):
         print(f"Redimensiones imagen-----: {conv.shape}")
 
         #RGB= self.imageYIQtoRGB(conv)
-        imRGB = conv
+        return conv
+        
+    def im_binaria(self, image):
+        im_bin = np.zeros(image.shape)
+        print(f"Binaria")
 
+        umbral = float(self.input_umbral.get()) if self.input_umbral.get().strip() else 0.5
+        print(f"Umbral", umbral)
+
+        im_bin = np.where(image >= umbral, 1, 0)
+        plt.imshow(im_bin, "gray")
+        plt.show()
+        return im_bin
+    
+    def erosion(self, image, kernel, size):
+        # Implementa la lógica para la operación de erosión con un kernel de tamaño 'size'
+        pass
+
+    def dilatacion(self, image, size):
+        # Implementa la lógica para la operación de dilatación con un kernel de tamaño 'size'
+        pass
+
+    def mediana(self, image, size):
+        # Implementa la lógica para la operación de filtro mediana con una ventana de tamaño 'size'
+        pass
+
+    def apertura(self, image, size):
+        # Implementa la lógica para la operación de apertura (erosión seguida de dilatación) con un kernel de tamaño 'size'
+        pass
+
+    def cierre(self, image, size):
+        # Implementa la lógica para la operación de cierre (dilatación seguida de erosión) con un kernel de tamaño 'size'
+        pass
 
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
-        global im, imRGB
+        global im, imRGB, image_show1
         selection= self.comboboxOperations.get()
         print(f"Operación seleccionada: {selection}")
         if im is not None:
-            #kernel = np.ones((3,3))
-            #kernel /=np.sum(kernel)
             #im = np.clip(im/255,0.,1.)
+            kernel = self.gaussiano(5)
+            conv = self.convolucion(im, kernel)
+            #convolve = signal.convolve
+            #conv = convolve(im, kernel, 'valid')
+
             match selection:
-                case "Pasabajos llano 3x3":
-                    kernel = self.K_lineal(3)
-                    self.convolucion(im, kernel)
-                case "Pasabajos llano 5x5":
-                    kernel = self.K_lineal(5)
-                    self.convolucion(im, kernel)
-                case "Pasabajos llano 7x7":
-                    kernel = self.K_lineal(7)
-                    self.convolucion(im, kernel)
-                case "Bartlett 3x3":
-                    kernel = self.bartlett(3)
-                    self.convolucion(im, kernel)
-                case "Bartlett 5x5":
-                    kernel = self.bartlett(5)
-                    self.convolucion(im, kernel)
-                case "Bartlett 7x7":
-                    kernel = self.bartlett(7)
-                    self.convolucion(im, kernel)
-                case "Gaussiano 5x5":
-                    kernel = self.gaussiano(5)
-                    self.convolucion(im, kernel)
-                case "Gaussiano 7x7":
-                    kernel = self.gaussiano(7)
-                    self.convolucion(im, kernel)
-                case "Pasaaltos Laplaciano v4":
-                    kernel = self.laplace(4)
-                    self.convolucion(im, kernel)
-                case "Pasaaltos Laplaciano v8":
-                    kernel = self.laplace(8)
-                    self.convolucion(im, kernel)
-                case "Pasabanda Dog 5x5":
-                    kernel = self.dog(5)
-                    self.convolucion(im, kernel)
+                case "Binarizar":
+                    im=self.im_binaria(im)
+                case "Erosión 3x3":
+                    self.erosion(im, conv, size=3)
+                case "Erosión 5x5":
+                    self.erosion(im, size=5)
+                case "Dilatación 3x3":
+                    self.dilatacion(im, size=3)
+                case "Dilatación 5x5":
+                    self.dilatacion(im, size=5)
+                case "Mediana 3x3":
+                    self.mediana(im, size=3)
+                case "Mediana 5x5":
+                    self.mediana(im, size=5)
+                case "Apertura 3x3":
+                    self.apertura(im, size=3)
+                case "Apertura 5x5":
+                    self.apertura(im, size=5)
+                case "Cierre 3x3":
+                    self.cierre(im, size=3)
+                case "Cierre 5x5":
+                    self.cierre(im, size=5)
                 case _:
                     print("Opción inválida")
-
+            #YIQ= self.imageRGBtoYIQ(im)
+            #im=YIQ[:, :, 0]
+            if image_show1 is not None:
+                image_show1.destroy()
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(np.uint8(imRGB * 255))  
+            img = Image.fromarray(np.uint8(im * 255))  
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter
             imagen_tk = ImageTk.PhotoImage(new_img)
             
             # Mostrar la imagen en el square2
-            img1 = Label(self.square2, image=imagen_tk)
-            img1.image = imagen_tk  # Mantener una referencia de la imagen
-            img1.pack()         
-            self.loaded_image = img
+            image_show1 = Label(self.square2, image=imagen_tk)
+            image_show1.image = imagen_tk  # Mantener una referencia de la imagen
+            image_show1.pack()      
 
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
