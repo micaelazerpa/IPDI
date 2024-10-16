@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import imageio.v2 as imageio
 from PIL import Image, ImageTk
-from scipy import signal 
-#use scipy version from now on
 
 import os
 
@@ -128,22 +126,26 @@ class Application(tk.Frame):
             self.master.destroy()
 
     def save_image(self):
-        if self.loaded_image: 
-            save_path = os.path.join(os.getcwd(), 'imagen_guardada.png')  # Guarda en la carpeta de ejecución
-            self.loaded_image.save(save_path)  
+        global loaded_image
+        if loaded_image is not None:             
+            if loaded_image.mode == 'F':
+                # Si es modo 'F', convertir a 'L' (escala de grises)
+                loaded_image = loaded_image.convert('L')
+
+            save_path = os.path.join(os.getcwd(), 'imagen_guardada.bmp')  # Guardar en la carpeta actual
+            loaded_image.save(save_path)  
             messagebox.showinfo("Imagen guardada", f"Imagen guardada en {save_path}")
         else:
             messagebox.showwarning("Sin imagen", "No hay imagen para guardar.")
 
     def copy_image(self):
-        global im, image_show
+        global loaded_image, image_show
         if image_show is not None:
             image_show.destroy()
  
-        if im is not None:
-            img = Image.fromarray(np.uint8(im * 255))  
+        if loaded_image is not None:
             # Redimensionar la imagen para el cuadro
-            new_img = img.resize((500, 400))
+            new_img = loaded_image.resize((500, 400))
             imagen_tk = ImageTk.PhotoImage(new_img)
             
             # Mostrar la imagen en square1
@@ -174,8 +176,12 @@ class Application(tk.Frame):
 
     def imageRGBtoYIQ(self, image):
         global process
-        #   1.Normalizar los valores de RGB del pixel
         im = np.clip(image/255,0.,1.)
+
+        if len(image.shape) == 2:  # Si es una imagen en escala de grises
+            print("La imagen está en escala de grises, no se convierte a YIQ.")
+            return image
+        #   1.Normalizar los valores de RGB del pixel
         
         #   2.RGB -> YIQ (utilizando la segunda matriz)
         YIQ=np.zeros(im.shape)
@@ -241,7 +247,11 @@ class Application(tk.Frame):
         global imRGB
         print(f"Kernel", kernel)
         YIQ = self.imageRGBtoYIQ(image)
-        image=YIQ[:,:,0]
+        
+        if YIQ.ndim == 3:
+            image = YIQ[:, :, 0]
+        else:
+            image = YIQ
 
         conv = np.zeros((np.array(image.shape) - np.array(kernel.shape) + 1))
 
@@ -255,19 +265,35 @@ class Application(tk.Frame):
         
     def im_binaria(self, image):
         im_bin = np.zeros(image.shape)
-        print(f"Binaria")
+        YIQ = self.imageRGBtoYIQ(image)
+        
+        if YIQ.ndim == 3:
+            im = YIQ[:, :, 0]
+        else:
+            im = YIQ
 
+        print(f"Binaria")
+        print(f"Rango de valores en la imagen original: {np.min(im)} a {np.max(im)}")
         umbral = float(self.input_umbral.get()) if self.input_umbral.get().strip() else 0.5
         print(f"Umbral", umbral)
 
-        im_bin = np.where(image >= umbral, 1, 0)
-        plt.imshow(im_bin, "gray")
-        plt.show()
+        im_bin = np.where(im > umbral, 1, 0)
+        #plt.imshow(im_bin, cmap='gray')
+        #plt.show()
         return im_bin
     
     def erosion(self, image, kernel, size):
-        # Implementa la lógica para la operación de erosión con un kernel de tamaño 'size'
-        pass
+        convolucion_resultado = self.convolucion(image, kernel)
+        erosion_resultado = np.zeros(convolucion_resultado.shape)
+
+        for i in range(convolucion_resultado.shape[0]):
+            for j in range(convolucion_resultado.shape[1]):
+                # En lugar de realizar una suma de productos, tomamos el valor mínimo
+                erosion_resultado[i, j] = np.min(convolucion_resultado[i:i + size, j:j + size])
+        print(f"Erosion resultado-----: {erosion_resultado}")
+        #plt.imshow(erosion_resultado, "gray")
+        #plt.show()
+        return erosion_resultado
 
     def dilatacion(self, image, size):
         # Implementa la lógica para la operación de dilatación con un kernel de tamaño 'size'
@@ -287,21 +313,21 @@ class Application(tk.Frame):
 
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
-        global im, imRGB, image_show1
+        global im, imRGB, image_show1, loaded_image
         selection= self.comboboxOperations.get()
         print(f"Operación seleccionada: {selection}")
         if im is not None:
-            #im = np.clip(im/255,0.,1.)
-            kernel = self.gaussiano(5)
-            conv = self.convolucion(im, kernel)
+            #im = np.clip(im/255,0.,1.)            
             #convolve = signal.convolve
             #conv = convolve(im, kernel, 'valid')
-
+            #YIQ= self.imageRGBtoYIQ(im)
+            #im=YIQ[:, :, 0]
             match selection:
                 case "Binarizar":
                     im=self.im_binaria(im)
                 case "Erosión 3x3":
-                    self.erosion(im, conv, size=3)
+                    kernel = self.gaussiano(3)
+                    im = self.erosion(im, kernel, size=3)
                 case "Erosión 5x5":
                     self.erosion(im, size=5)
                 case "Dilatación 3x3":
@@ -337,6 +363,7 @@ class Application(tk.Frame):
             image_show1 = Label(self.square2, image=imagen_tk)
             image_show1.image = imagen_tk  # Mantener una referencia de la imagen
             image_show1.pack()      
+            loaded_image = img
 
 root = tk.Tk()
 root.geometry('1300x800')  # Ajuste del tamaño de la ventana para acomodar los cuadros y botones
