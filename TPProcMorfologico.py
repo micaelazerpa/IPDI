@@ -16,7 +16,7 @@ imRGB = None
 process =None
 image_show = None
 image_show1 = None
-im= None
+image= None
 
 class Application(tk.Frame):
     global url_image
@@ -105,14 +105,14 @@ class Application(tk.Frame):
             self.show_image(url_image)
 
     def show_image(self, url_image):
-        global im, image_show
+        global image, image_show
         print(f"Show de imagen seleccionada: {url_image}")
          # Limpiar la imagen anterior si existe
         if image_show is not None:
             image_show.destroy()
 
-        im = imageio.imread(url_image)
-        img=Image.fromarray(im)
+        image = imageio.imread(url_image)
+        img=Image.fromarray(image)
         new_img = img.resize((500, 400))  # Cambiado para que la imagen se ajuste al tamaño del cuadro
         imagen_tk = ImageTk.PhotoImage(new_img)
         
@@ -218,9 +218,9 @@ class Application(tk.Frame):
         return RGB_BYTE
 
     def histogram(self):
-        global im
+        global image
         print(f"Histograma")
-        YIQ = self.imageRGBtoYIQ(im)
+        YIQ = self.imageRGBtoYIQ(image)
         histograma, bins = np.histogram(YIQ[:,:,0].flatten(), bins=10, range=(0, 1))
 
         plt.subplots(figsize=(4, 2))
@@ -246,107 +246,134 @@ class Application(tk.Frame):
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
         print(f"Kernel", kernel)
-        YIQ = self.imageRGBtoYIQ(image)
-        
-        if YIQ.ndim == 3:
-            image = YIQ[:, :, 0]
+        if image.ndim == 3:
+            YIQ = self.imageRGBtoYIQ(image)
+            im = YIQ[:, :, 0]
         else:
-            image = YIQ
+            im = np.clip(image/255,0.,1.)
 
-        conv = np.zeros((np.array(image.shape) - np.array(kernel.shape) + 1))
+        conv = np.zeros((np.array(im.shape) - np.array(kernel.shape) + 1))
 
         for i in range(conv.shape[0]):
             for j in range(conv.shape[1]):
-                conv[i,j]= (image[i:i+kernel.shape[0], j:j+kernel.shape[1]]*kernel).sum()
+                conv[i,j]= (im[i:i+kernel.shape[0], j:j+kernel.shape[1]]*kernel).sum()
         print(f"Redimensiones imagen-----: {conv.shape}")
 
         #RGB= self.imageYIQtoRGB(conv)
         return conv
         
     def im_binaria(self, image):
+        global imRGB
         im_bin = np.zeros(image.shape)
-        YIQ = self.imageRGBtoYIQ(image)
-        
-        if YIQ.ndim == 3:
-            im = YIQ[:, :, 0]
-        else:
-            im = YIQ
 
         print(f"Binaria")
-        print(f"Rango de valores en la imagen original: {np.min(im)} a {np.max(im)}")
+        print(f"Rango de valores en la imagen original: {np.min(image)} a {np.max(image)}")
         umbral = float(self.input_umbral.get()) if self.input_umbral.get().strip() else 0.5
         print(f"Umbral", umbral)
 
-        im_bin = np.where(im > umbral, 1, 0)
-        im = np.uint8(im_bin * 255)
+        im_bin = np.where(image > umbral, 1, 0)
         #plt.imshow(im_bin, cmap='gray')
         #plt.show()
-        return im
+        imRGB = im_bin
     
-    def erosion(self, image, kernel, size):
-        convolucion_resultado = self.convolucion(image, kernel)
-        erosion_resultado = np.zeros(convolucion_resultado.shape)
+    def erosion(self, im, kernel):
+        global imRGB
 
-        for i in range(convolucion_resultado.shape[0]):
-            for j in range(convolucion_resultado.shape[1]):
-                # En lugar de realizar una suma de productos, tomamos el valor mínimo
-                erosion_resultado[i, j] = np.min(convolucion_resultado[i:i + size, j:j + size])
-        print(f"Erosion resultado-----: {erosion_resultado}")
-        plt.imshow(erosion_resultado, "gray")
+        # Creamos la imagen resultante de tamaño reducido debido a la convolución
+        erosion_im = np.zeros((np.array(im.shape) - np.array(kernel.shape) + 1))
+
+        # Aplicamos la erosión tomando el valor mínimo dentro de cada vecindad
+        for i in range(erosion_im.shape[0]):
+            for j in range(erosion_im.shape[1]):
+                # Tomamos el valor mínimo en la vecindad definida por el kernel
+                erosion_im[i, j] = np.min(im[i:i+kernel.shape[0], j:j+kernel.shape[1]])
+
+        print(f"Redimensiones imagen erosionada: {erosion_im.shape}")        
+        #plt.imshow(erosion_im, "gray")
+        #plt.show()
+        imRGB= erosion_im
+
+    def dilatacion(self, im, kernel):
+        global imRGB
+
+        dilatacion_im = np.zeros((np.array(im.shape) - np.array(kernel.shape) + 1))
+
+        # Aplicamos la dilatación tomando el valor máximo dentro de cada vecindad
+        for i in range(dilatacion_im.shape[0]):
+            for j in range(dilatacion_im.shape[1]):
+                # Tomamos el valor máximo en la vecindad definida por el kernel
+                dilatacion_im[i, j] = np.max(im[i:i+kernel.shape[0], j:j+kernel.shape[1]])
+
+        print(f"Redimensiones imagen dilatada: {dilatacion_im.shape}")
+        #plt.imshow(dilatacion_im, "gray")
+        #plt.show()
+        imRGB = dilatacion_im
+
+    def mediana(self, image, kernel):
+        global imRGB
+
+        mediana_im = np.zeros((np.array(image.shape) - np.array(kernel.shape) + 1))
+
+        for i in range(mediana_im.shape[0]):
+            for j in range(mediana_im.shape[1]):
+                vecindad = image[i:i+kernel.shape[0], j:j+kernel.shape[1]]
+                mediana_im[i, j] = np.median(vecindad)
+
+        print(f"Redimensiones imagen con filtro de mediana: {mediana_im.shape}")
+
+        plt.imshow(mediana_im, "gray")
         plt.show()
-        return erosion_resultado
+        imRGB = mediana_im
 
-    def dilatacion(self, image, size):
-        # Implementa la lógica para la operación de dilatación con un kernel de tamaño 'size'
-        pass
-
-    def mediana(self, image, size):
-        # Implementa la lógica para la operación de filtro mediana con una ventana de tamaño 'size'
-        pass
-
-    def apertura(self, image, size):
+    def apertura(self, image):
         # Implementa la lógica para la operación de apertura (erosión seguida de dilatación) con un kernel de tamaño 'size'
         pass
 
-    def cierre(self, image, size):
+    def cierre(self, image):
         # Implementa la lógica para la operación de cierre (dilatación seguida de erosión) con un kernel de tamaño 'size'
         pass
 
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
-        global im, imRGB, image_show1, loaded_image
+        global image, imRGB, image_show1, loaded_image
         selection= self.comboboxOperations.get()
         print(f"Operación seleccionada: {selection}")
-        if im is not None:
-            #im = np.clip(im/255,0.,1.)            
-            #convolve = signal.convolve
-            #conv = convolve(im, kernel, 'valid')
-            #YIQ= self.imageRGBtoYIQ(im)
-            #im=YIQ[:, :, 0]
+        if image is not None:
+            if image.ndim == 3:
+                YIQ = self.imageRGBtoYIQ(image)
+                image = YIQ[:, :, 0] 
+            else:
+                image = np.clip(image / 255, 0., 1.) 
+
             match selection:
                 case "Binarizar":
-                    im=self.im_binaria(im)
+                    self.im_binaria(image)
                 case "Erosión 3x3":
                     kernel = self.gaussiano(3)
-                    im = self.erosion(im, kernel, size=3)
+                    self.erosion(image, kernel)
                 case "Erosión 5x5":
-                    self.erosion(im, size=5)
+                    kernel = self.gaussiano(5)
+                    self.erosion(image, kernel)
                 case "Dilatación 3x3":
-                    self.dilatacion(im, size=3)
+                    kernel = self.gaussiano(3)
+                    self.dilatacion(image, kernel)
                 case "Dilatación 5x5":
-                    self.dilatacion(im, size=5)
+                    kernel = self.gaussiano(5)
+                    self.dilatacion(image, kernel)
                 case "Mediana 3x3":
-                    self.mediana(im, size=3)
+                    kernel = self.gaussiano(3)
+                    self.mediana(image, kernel)
                 case "Mediana 5x5":
-                    self.mediana(im, size=5)
+                    kernel = self.gaussiano(5)
+                    self.mediana(image, kernel)
                 case "Apertura 3x3":
-                    self.apertura(im, size=3)
+                    self.apertura(image, size=3)
                 case "Apertura 5x5":
-                    self.apertura(im, size=5)
+                    self.apertura(image, size=5)
                 case "Cierre 3x3":
-                    self.cierre(im, size=3)
+                    self.cierre(image, size=3)
                 case "Cierre 5x5":
-                    self.cierre(im, size=5)
+                    self.cierre(image, size=5)
                 case _:
                     print("Opción inválida")
             #YIQ= self.imageRGBtoYIQ(im)
@@ -354,7 +381,7 @@ class Application(tk.Frame):
             if image_show1 is not None:
                 image_show1.destroy()
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(im)  
+            img = Image.fromarray(np.uint8(imRGB * 255))  
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter

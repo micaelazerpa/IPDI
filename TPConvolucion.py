@@ -392,7 +392,7 @@ class Application(tk.Frame):
                     print("Opción inválida")
 
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(imRGB)  
+            img = Image.fromarray(np.uint8(imRGB * 255))  
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter
