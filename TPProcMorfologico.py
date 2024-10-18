@@ -243,6 +243,22 @@ class Application(tk.Frame):
         k = np.outer(a, a.T)
         return k / k.sum()
     
+    def box(self, r):
+        se = np.ones((r*2+1,r*2+1),dtype=np.bool)
+        plt.title("Caja")
+        plt.imshow(se)
+        plt.show()
+        return se
+
+    def circle(self, r, threshold = 0.3):
+        vec = np.linspace(-r, r, r*2+1)
+        [x,y] = np.meshgrid(vec,vec)
+        se = (x**2 + y**2)**0.5 < (r + threshold)
+        plt.title("Círculo")
+        plt.imshow(se)
+        plt.show()
+        return se
+    
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
         print(f"Kernel", kernel)
@@ -289,8 +305,8 @@ class Application(tk.Frame):
                 erosion_im[i, j] = np.min(im[i:i+kernel.shape[0], j:j+kernel.shape[1]])
 
         print(f"Redimensiones imagen erosionada: {erosion_im.shape}")        
-        #plt.imshow(erosion_im, "gray")
-        #plt.show()
+        plt.imshow(erosion_im, "gray")
+        plt.show()
         imRGB= erosion_im
 
     def dilatacion(self, im, kernel):
@@ -305,8 +321,8 @@ class Application(tk.Frame):
                 dilatacion_im[i, j] = np.max(im[i:i+kernel.shape[0], j:j+kernel.shape[1]])
 
         print(f"Redimensiones imagen dilatada: {dilatacion_im.shape}")
-        #plt.imshow(dilatacion_im, "gray")
-        #plt.show()
+        plt.imshow(dilatacion_im, "gray")
+        plt.show()
         imRGB = dilatacion_im
 
     def mediana(self, image, kernel):
@@ -325,14 +341,41 @@ class Application(tk.Frame):
         plt.show()
         imRGB = mediana_im
 
-    def apertura(self, image):
-        # Implementa la lógica para la operación de apertura (erosión seguida de dilatación) con un kernel de tamaño 'size'
-        pass
+    def apertura(self, image, kernel):
+        global imRGB
+        im_erosionada = self.erosion(image, kernel)
+        apertura = self.dilatacion(im_erosionada, kernel)
 
-    def cierre(self, image):
-        # Implementa la lógica para la operación de cierre (dilatación seguida de erosión) con un kernel de tamaño 'size'
-        pass
+        imRGB = apertura
 
+    def cierre(self, image, kernel):
+        global imRGB
+        im_dilatada = self.dilatacion(image, kernel)
+        cierre = self.erosion(im_dilatada, kernel)
+
+        imRGB = cierre
+
+    def _morph_gray(im, se, op):
+        result = np.zeros(im.shape)
+        offset = (np.array(se.shape)-1)//2
+        im = np.pad(im,[(offset[0],offset[0]),(offset[1],offset[1])],'edge')
+        for y, x in np.ndindex(result.shape):
+            pixels = im[y: y + se.shape[0], x: x + se.shape[1]][se]
+            result[y, x] = op(pixels)
+
+        plt.imshow(result, "gray")
+        plt.show()
+        return result
+    
+    def im_border_ext(im, se):
+        return im_dilate(im, se) - im
+
+    def im_border_int(im, se):
+        return im - im_erode(im, se)
+
+    def im_gradient(im, se):
+        return im_dilate(im,se) - im_erode(im,se)
+    
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
         global image, imRGB, image_show1, loaded_image
@@ -349,35 +392,39 @@ class Application(tk.Frame):
                 case "Binarizar":
                     self.im_binaria(image)
                 case "Erosión 3x3":
-                    kernel = self.gaussiano(3)
+                    kernel = self.box(5)
                     self.erosion(image, kernel)
                 case "Erosión 5x5":
-                    kernel = self.gaussiano(5)
+                    kernel = self.circle(2)
                     self.erosion(image, kernel)
                 case "Dilatación 3x3":
-                    kernel = self.gaussiano(3)
+                    kernel = self.circle(3)
                     self.dilatacion(image, kernel)
                 case "Dilatación 5x5":
-                    kernel = self.gaussiano(5)
+                    kernel = self.box(5)
                     self.dilatacion(image, kernel)
                 case "Mediana 3x3":
-                    kernel = self.gaussiano(3)
+                    kernel = self.box(3)
                     self.mediana(image, kernel)
                 case "Mediana 5x5":
-                    kernel = self.gaussiano(5)
+                    kernel = self.circle(5)
                     self.mediana(image, kernel)
                 case "Apertura 3x3":
-                    self.apertura(image, size=3)
+                    kernel = self.circle(3)
+                    #self._morph_gray(image, kernel, np.max)
+                    self.apertura(image, kernel)
                 case "Apertura 5x5":
-                    self.apertura(image, size=5)
+                    kernel = self.circle(5)
+                    self.apertura(image, kernel)
                 case "Cierre 3x3":
-                    self.cierre(image, size=3)
-                case "Cierre 5x5":
-                    self.cierre(image, size=5)
+                    kernel = self.circle(3)
+                    self.cierre(image, kernel)
+                case "Cierre 5x5":                    
+                    kernel = self.circle(5)
+                    self.cierre(image, kernel)
                 case _:
                     print("Opción inválida")
-            #YIQ= self.imageRGBtoYIQ(im)
-            #im=YIQ[:, :, 0]
+            
             if image_show1 is not None:
                 image_show1.destroy()
             # Convertir el array NumPy resultante a una imagen Pillow
