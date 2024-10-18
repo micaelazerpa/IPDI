@@ -278,9 +278,10 @@ class Application(tk.Frame):
         print(f"Umbral", umbral)
 
         im_bin = np.where(im > umbral, 1, 0)
+        im = np.uint8(im_bin * 255)
         #plt.imshow(im_bin, cmap='gray')
         #plt.show()
-        return im_bin
+        return im
     
     def erosion(self, image, kernel, size):
         convolucion_resultado = self.convolucion(image, kernel)
@@ -291,8 +292,8 @@ class Application(tk.Frame):
                 # En lugar de realizar una suma de productos, tomamos el valor mínimo
                 erosion_resultado[i, j] = np.min(convolucion_resultado[i:i + size, j:j + size])
         print(f"Erosion resultado-----: {erosion_resultado}")
-        #plt.imshow(erosion_resultado, "gray")
-        #plt.show()
+        plt.imshow(erosion_resultado, "gray")
+        plt.show()
         return erosion_resultado
 
     def dilatacion(self, image, size):
@@ -353,7 +354,7 @@ class Application(tk.Frame):
             if image_show1 is not None:
                 image_show1.destroy()
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(np.uint8(im * 255))  
+            img = Image.fromarray(im)  
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter

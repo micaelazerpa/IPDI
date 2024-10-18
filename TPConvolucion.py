@@ -71,7 +71,7 @@ class Application(tk.Frame):
 
 
         # Crea el Combobox para Operaciones
-        options = ["Pasabajos llano 3x3", "Pasabajos llano 5x5", "Pasabajos llano 7x7", "Bartlett 3x3", "Bartlett 5x5", "Bartlett 7x7", "Gaussiano 5x5", "Gaussiano 7x7", "Pasaaltos Laplaciano v4", "Pasaaltos Laplaciano v8", "Pasabanda Dog 5x5"]
+        options = ["Pasabajos llano 3x3", "Pasabajos llano 5x5", "Pasabajos llano 7x7", "Bartlett 3x3", "Bartlett 5x5", "Bartlett 7x7", "Gaussiano 5x5", "Gaussiano 7x7", "Pasaaltos Laplaciano v4", "Pasaaltos Laplaciano v8", "Pasabanda Dog 5x5", "Sobel O", "Sobel N", "Sobel E", "Sobel S", "Sobel NO", "Sobel NE", "Sobel SO", "Sobel SE"]
         self.operation_message= tk.Label(self.bottom_frame, text="Filtros")
         self.operation_message.pack(side="left")
         self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
@@ -262,19 +262,32 @@ class Application(tk.Frame):
             return kernel
         return identity_kernel(low_pass.shape) - low_pass
     
+    def sobel(self, orientacion):
+        match orientacion:
+            case "Pasabajos llano 3x3":
+                print(f"Kernel", kernel)
+                
+            case "Pasabajos llano 5x5":
+                print(f"Kernel", kernel)
+
+    
     def convolucion(self, image, kernel=np.ones((1,1))):
         global imRGB
         print(f"Kernel", kernel)
-        YIQ = self.imageRGBtoYIQ(image)
-        image=YIQ[:,:,0]
+        if image.ndim == 3:
+            YIQ = self.imageRGBtoYIQ(image)
+            im = YIQ[:, :, 0]
+        else:
+            im = np.clip(image/255,0.,1.)
 
-        conv = np.zeros((np.array(image.shape) - np.array(kernel.shape) + 1))
+        conv = np.zeros((np.array(im.shape) - np.array(kernel.shape) + 1))
 
         for i in range(conv.shape[0]):
             for j in range(conv.shape[1]):
-                conv[i,j]= (image[i:i+kernel.shape[0], j:j+kernel.shape[1]]*kernel).sum()
+                conv[i,j]= (im[i:i+kernel.shape[0], j:j+kernel.shape[1]]*kernel).sum()
         print(f"Redimensiones imagen-----: {conv.shape}")
-
+        plt.imshow(conv, cmap='gray')
+        plt.show()
         #RGB= self.imageYIQtoRGB(conv)
         imRGB = conv
 
@@ -322,11 +335,64 @@ class Application(tk.Frame):
                 case "Pasabanda Dog 5x5":
                     kernel = self.dog(5)
                     self.convolucion(im, kernel)
+                # Sobel Oeste
+                case "Sobel O":
+                    kernel = np.array([[ 1,  0, -1],
+                                    [ 2,  0, -2],
+                                    [ 1,  0, -1]])
+                    self.convolucion(im, kernel)
+                # Sobel Norte
+                case "Sobel N":
+                    kernel = np.array([[ 1,  2,  1],
+                                    [ 0,  0,  0],
+                                    [-1, -2, -1]])
+                    self.convolucion(im, kernel)
+                # Sobel Este
+                case "Sobel E":
+                    kernel = np.array([[-1,  0,  1],
+                                    [-2,  0,  2],
+                                    [-1,  0,  1]])
+                    self.convolucion(im, kernel)
+
+                # Sobel Sur
+                case "Sobel S":
+                    kernel = np.array([[-1, -2, -1],
+                                    [ 0,  0,  0],
+                                    [ 1,  2,  1]])
+                    self.convolucion(im, kernel)
+
+                # Sobel Noroeste (NO)
+                case "Sobel NO":
+                    kernel = np.array([[ 2,  1,  0],
+                                    [ 1,  0, -1],
+                                    [ 0, -1, -2]])
+                    self.convolucion(im, kernel)
+
+                # Sobel Noreste (NE)
+                case "Sobel NE":
+                    kernel = np.array([[ 0,  1,  2],
+                                    [-1,  0,  1],
+                                    [-2, -1,  0]])
+                    self.convolucion(im, kernel)
+
+                # Sobel Suroeste (SO)
+                case "Sobel SO":
+                    kernel = np.array([[ 0, -1, -2],
+                                    [ 1,  0, -1],
+                                    [ 2,  1,  0]])
+                    self.convolucion(im, kernel)
+
+                # Sobel Sureste (SE)
+                case "Sobel SE":
+                    kernel = np.array([[-2, -1,  0],
+                                    [-1,  0,  1],
+                                    [ 0,  1,  2]])
+                    self.convolucion(im, kernel)
                 case _:
                     print("Opción inválida")
 
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(np.uint8(imRGB * 255))  
+            img = Image.fromarray(imRGB)  
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter
