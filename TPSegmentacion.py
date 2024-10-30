@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import imageio.v2 as imageio
 from PIL import Image, ImageTk
+from scipy import signal
+from scipy.signal import find_peaks
+import cv2
 
 import os
 
@@ -86,7 +89,7 @@ class Application(tk.Frame):
         self.input_umbral.pack(side="left", padx=10)
 
         # Crea el Combobox para Operaciones
-        options = ["50% de pixeles negros y blancos","Distancia mínima", "Otsu", "Laplaciano", "Borde morfológico", "Marching squares"]
+        options = ["Global","50% de pixeles negros y blancos","Distancia mínima", "Otsu", "Laplaciano", "Borde morfológico", "Marching squares"]
         self.operation_message= tk.Label(self.bottom_frame, text="Filtro")
         self.operation_message.pack(side="left")
         self.comboboxOperations = ttk.Combobox(self.bottom_frame, values=options, height=20, width=28)
@@ -235,7 +238,7 @@ class Application(tk.Frame):
         plt.ylabel('Frecuencia %')
         plt.show()
 
-        return histograma
+        return histograma, bins
         
     def im_binaria(self, image):
         global imRGB
@@ -251,14 +254,13 @@ class Application(tk.Frame):
         #plt.show()
         imRGB = im_bin
 
-    def otsu(self, img2, hist):
+    def otsu(self, img2, hist, bins):
         global imRGB
         print(f"Otsu")
         print(f"Rango de valores en la imagen original: {np.min(img2)} a {np.max(img2)}")
 
         pixel_numb = img2.shape[0] * img2.shape[1]
         prom_pond = 1/pixel_numb
-        bins = 100
 
         final_thresh = -1
         final_value = -1
@@ -289,12 +291,100 @@ class Application(tk.Frame):
         plt.show()
         imRGB = img8
 
-    def im_border_int(im, se):
-        return im - im_erode(im, se)
+    def im50_50(self, im):
+        global imRGB
+        umbral_median = np.median(im)
 
-    def im_gradient(im, se):
-        return im_dilate(im,se) - im_erode(im,se)
+        binary_img = np.where(im > umbral_median, 1, 0)
+
+        plt.imshow(binary_img, cmap='gray')
+        plt.title("Umbralización con 50% de píxeles negros y blancos")
+        plt.show()
+
+        imRGB = binary_img
+
+    def distancia_minima(self, img, hist, bins):
+        global imRGB
+        binary_img = np.zeros(img.shape)
+
+        print(f"Distancia minima")
+        print(f"Rango de valores en la imagen original: {np.min(img)} a {np.max(img)}")
+        
+        # Encontrar los picos en el histograma, que corresponden a las "modas"
+        peaks, _ = find_peaks(hist, distance=20) 
+        
+        if len(peaks) >= 2:
+            peaks = sorted(peaks[:2])
+            mode_dark, mode_light = sorted([bins[peaks[0]], bins[peaks[1]]])
+        else:
+            print("No se encontraron suficientes picos para binarizar.")
+            return 
+        
+        # Aplicar binarización por distancia mínima
+        binary_img = np.zeros_like(img)
+        binary_img[np.abs(img - mode_dark) < np.abs(img - mode_light)] = 0  # Cerca del modo oscuro
+        binary_img[np.abs(img - mode_dark) >= np.abs(img - mode_light)] = 1  # Cerca del modo claro
+
+        plt.imshow(binary_img, cmap='gray')
+        plt.title("Binarización por Modas Claras y Oscuras (Distancia Mínima)")
+        plt.show()
+
+        imRGB = binary_img
+
+    def laplace(self, _type, normalize=False):
+        global imRGB
+        if _type==4:
+            kernel =  np.array([[0.,-1.,0.],[-1.,4.,-1.],[0.,-1.,0.]])
+        if _type==8:
+            kernel =  np.array([[-1.,-1.,-1.],[-1.,8.,-1.],[-1.,-1.,-1.]])
+        if normalize:
+            kernel /= np.sum(np.abs(kernel))
+        return kernel
     
+    def lapaciano(self, im, kernel):
+        global imRGB
+        convolved_image = signal.convolve(im, kernel, mode='valid')
+
+        plt.imshow(convolved_image, cmap='gray')
+        plt.title("Detección de bordes con Laplaciano")
+        plt.show()
+
+        imRGB = convolved_image
+
+    def box(self, r):
+        se = np.ones((r*2+1,r*2+1),dtype=np.bool)
+        plt.title("Caja")
+        plt.imshow(se)
+        plt.show()
+        return se
+    
+    def borde_morfologico(self, im, kernel):
+        global imRGB
+
+        erosion_im = signal.convolve(im, np.ones_like(kernel) * np.min(kernel), mode='valid')
+        dilatacion_im = signal.convolve(im, np.ones_like(kernel) * np.max(kernel), mode='valid')
+
+        morfologico = dilatacion_im.astype(int) - erosion_im.astype(int)
+        
+        plt.imshow(morfologico, cmap='gray')
+        plt.title('Detección de bordes con Borde Morfológico')
+        plt.show()
+
+        imRGB = morfologico
+
+    def marching_squares(self, img):
+        global imRGB
+        img_gray = (img * 255).astype(np.uint8)
+        # Aplicar el detector de bordes de Canny
+        low_threshold = 50
+        high_threshold = 150
+        canny = cv2.Canny(img_gray, low_threshold, high_threshold)
+
+        plt.imshow(canny, cmap="gray")
+        plt.title("Bordes Detectados (Canny)")
+        plt.show()
+        imRGB = canny
+
     # Función para procesar la operación según la selección
     def process_arithmetic(self):
         global image, imRGB, image_show1, loaded_image
@@ -302,37 +392,53 @@ class Application(tk.Frame):
         print(f"Operación seleccionada: {selection}")
         if image is not None:
 
-            hist = self.histogram()
+            hist, bins = self.histogram()
             if image.ndim == 3:
                 YIQ = self.imageRGBtoYIQ(image)
                 image = YIQ[:, :, 0] 
+                print(f"Procesado a YIQ, trabajando con el canal Y")
             else:
                 image = np.clip(image / 255, 0., 1.) 
+                print(f"Imagen en escala de grises")
 
             match selection:
+                case "Global":
+                    self.im50_50(image)
                 case "50% de pixeles negros y blancos":
                     self.im_binaria(image)
                 case "Distancia mínima":
-                    kernel = self.box(5)
-                    self.erosion(image, kernel)
+                    self.distancia_minima(image, hist, bins)
                 case "Otsu":
-                    self.otsu(image, hist)
+                    self.otsu(image, hist, bins)
                 case "Laplaciano":
-                    kernel = self.circle(3)
-                    self.dilatacion(image, kernel)
+                    kernel = self.laplace(4)
+                    self.lapaciano(image, kernel)
                 case "Borde morfológico":
-                    kernel = self.box(5)
-                    self.dilatacion(image, kernel)
+                    #kernel = self.box(3)
+                    kernel = np.array([[1, -1, 0],
+                   [-1, 1, 0],
+                   [0, 0, 0]])
+                    #self.borde_morfologico(image, kernel)
+                    morfologico = signal.convolve(image, kernel, mode='same')
+                    plt.imshow(morfologico, cmap='gray')
+                    plt.title('Detección de bordes con Borde Morfológico')
+                    plt.show()
+
+                    imRGB = morfologico
                 case "Marching squares":
-                    kernel = self.box(3)
-                    self.mediana(image, kernel)
+                    self.marching_squares(image)
                 case _:
                     print("Opción inválida")
             
             if image_show1 is not None:
                 image_show1.destroy()
             # Convertir el array NumPy resultante a una imagen Pillow
-            img = Image.fromarray(np.uint8(imRGB * 255))  
+            if imRGB.dtype != np.uint8:
+                img = Image.fromarray(np.uint8(imRGB * 255))
+                print("Procesado a uint8")
+            else:
+                img = Image.fromarray(imRGB)
+
             new_img = img.resize((500, 400))  
             
             # Convertir la imagen a formato Tkinter
